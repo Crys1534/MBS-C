@@ -1,3 +1,26 @@
+(async function() {
+  const widgetBox = document.getElementById('mb-comentarios-widget');
+  if (!widgetBox) return;
+
+  // 1. Cargar Firebase automáticamente si Weebly no lo tiene
+  const loadScript = (src) => new Promise(r => { const s = document.createElement('script'); s.src = src; s.onload = r; document.head.appendChild(s); });
+  if (typeof firebase === 'undefined') {
+    await loadScript("https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js");
+    await loadScript("https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js");
+    await loadScript("https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js");
+  }
+
+  // === CONFIGURACIÓN DE EMOTES PERSONALIZADOS ===
+  const MIS_EMOTES = [
+      { name: ":like:", img: "https://mineblocksstuffs.weebly.com/uploads/1/2/7/3/127300461/like-comment2_orig.png" },
+      { name: ":zanz:", img: "/uploads/1/2/7/3/127300461/zanz-emote_orig.png" }, 
+      { name: ":mb:", img: "/uploads/1/2/7/3/127300461/mineblocks2-icon_orig.png" } 
+  ];
+
+  const EMOJIS_BASE = ["😀","😂","🤣","😊","😍","🥰","😘","😗","😜","🤪","😎","🤩","🥳","😏","😒","😞","😔","😟","😕","🙁","😣","😖","😫","😩","🥺","😢","😭","😤","😠","😡","🤬","🤯","😳","🥵","🥶","😱","😨","😰","😥","😓","🤗","🤔","🤭","🤫","🤥","😶","😐","😑","😬","🙄","😯","😦","😧","😮","😲","🥱","😴","🤤","😪","😵","🤐","🥴","🤢","🤮","🤧","😷","🤒","🤕","🤑","🤠","😈","👿","👹","👺","🤡","💩","👻","💀","☠️","👽","👾","🤖","🎃","😺","😸","😹","😻","😼","😽","🙀","😿","😾","❤️","🧡","💛","💚","💙","💜","🤎","🖤","🤍","💔","❣️","💕","💞","💓","💗","💖","💘","💝","👍","👎","👌","✌️","🤞","🫰","🤟","🤘","🤙","👈","👉","👆","👇","☝️","✋","🤚","🖐","🖖","👋","🤙","💪","🦾","🖕","✍️","🙏","🤝","👏","🙌","👐","🤲","🎉","✨","🔥","✨","🌟","⭐","💥","💦","💨","💫","💯"];
+
+  // 2. Inyectar Interfaz (CSS + HTML) - TODO DEBE IR DENTRO DE LOS BACKTICKS ` `
+  widgetBox.innerHTML = `
 <style>
 /* === VARIABLES Y BASE === */
 :root {
@@ -24,14 +47,11 @@
 #nombreUsuario { padding:10px; border:0 solid rgba(255,255,255,.3); border-radius:4px; font-size:14px; background:rgba(0,0,0,.2); color:#fff; width:225px; outline:none; }
 #nombreUsuarioLogueado { font-weight:700; font-size:14px; }
 #textoComentario, .input-respuesta { padding:10px; border:0 solid rgba(255,255,255,.3); border-radius:4px; font-size:14px; background:rgba(0,0,0,.2); color:#fff; width:100%; outline:none; resize:vertical; }
-#textoComentario { min-height:90px; padding-right: 40px; /* Espacio para el botón de emoji */ }
+#textoComentario { min-height:90px; padding-right: 40px; }
 .input-respuesta { min-height:42px; padding-right: 40px; }
-
-/* Contenedor relativo para el input para poder posicionar el botón de emoji encima */
 .input-con-emoji-wrap { position: relative; width: 100%; }
 .btn-emoji-trigger { position: absolute; right: 8px; top: 10px; background: transparent; border: none; font-size: 18px; cursor: pointer; color: var(--text-muted); transition: color 0.2s, transform 0.2s; padding: 2px; z-index: 2; }
 .btn-emoji-trigger:hover { color: #fff; transform: scale(1.1); }
-
 .controles-formulario { display:flex; justify-content:flex-end; align-items:center; gap:8px; }
 .btn-send-whatsapp, .btn-send-whatsapp-small { background:#0073e6; border:none; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:background .2s; flex-shrink:0; }
 .btn-send-whatsapp { width:44px; height:44px; }
@@ -40,7 +60,7 @@
 .btn-attach { background:transparent; border:none; color:var(--text-muted); cursor:pointer; font-size:20px; transition:transform 0.2s,color 0.2s; padding:5px; display:flex; align-items:center; justify-content:center; }
 .btn-attach:hover { transform:scale(1.1); color:#fff; }
 
-/* === SELECTOR DE EMOJIS (ESTILO DISCORD) === */
+/* === SELECTOR DE EMOJIS === */
 .emoji-picker-container { position: absolute; z-index: 100; background: var(--bg-panel); border: 1px solid var(--c-border); border-radius: 8px; width: 300px; max-width: 90vw; height: 350px; display: none; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.6); animation: fadeIn 0.2s ease; overflow: hidden; }
 .emoji-tabs { display: flex; border-bottom: 1px solid var(--c-border); background: rgba(0,0,0,0.2); }
 .emoji-tab { flex: 1; text-align: center; padding: 10px; cursor: pointer; font-size: 13px; font-weight: bold; color: var(--text-muted); transition: background 0.2s, color 0.2s; border-bottom: 2px solid transparent; }
@@ -51,42 +71,31 @@
 .emoji-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(36px, 1fr)); gap: 5px; }
 .emoji-item { background: transparent; border: none; cursor: pointer; font-size: 24px; display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 6px; transition: background 0.1s, transform 0.1s; padding: 0; }
 .emoji-item:hover { background: var(--c-bg-hover); transform: scale(1.1); }
-.emote-img { height: 24px; width: auto; max-width: 32px; object-fit: contain; } /* Tamaño en el selector */
-
-/* El tamaño real que se ve en el texto final renderizado */
+.emote-img { height: 24px; width: auto; max-width: 32px; object-fit: contain; }
 .inline-emote { height: 14px; width: auto; vertical-align: middle; margin: 0 2px; }
 
-/* === COMENTARIOS E HILOS === */
+/* === COMENTARIOS === */
 .comentario-individual { padding:0 15px !important; margin-bottom:5px; display:flex; gap:6px; position:relative; z-index:1; animation:fadeIn 0.3s ease; }
 @keyframes fadeIn { from{opacity:0; transform:translateY(5px);} to{opacity:1; transform:translateY(0);} }
 .comentario-individual.es-anclado { background:rgba(218,165,32,0.1); border:1px solid rgba(218,165,32,0.4); padding-top:15px !important; border-radius:6px; }
 .badge-anclado { background:#daa520; color:#000; font-size:10px; font-weight:bold; padding:2px 6px; border-radius:4px; margin-left:8px; display:inline-block; vertical-align:middle; }
-
-/* AVATARES */
 .avatar { width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0; overflow:hidden; background:rgba(0,0,0,.1); z-index:2; position:relative; }
 .avatar img { width:100%; height:100%; object-fit:cover; }
 .avatar-upload-btn { cursor:pointer; position:relative; }
 .avatar-overlay { position:absolute; top:0; left:0; width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-size:18px; background:rgba(255,255,255,.4); opacity:0; transition:0.2s; z-index:10; color:#000; }
 .avatar-upload-btn:hover .avatar-overlay { opacity:1; }
-
 .comentario-contenido { flex-grow:1; min-width:0; }
 .cabecera-comentario { display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; }
 .comentario-nombre { font-weight:700; font-size:14px; display:inline-flex; align-items:center; }
 .comentario-fecha { font-size:11px; color:gray; }
 #caja-comentarios div p.comentario-texto { margin:0 0 10px 0 !important; font-size:14px !important; line-height:1.5 !important; white-space:pre-wrap !important; word-break:break-word !important; }
-
-/* ADJUNTOS */
 .img-adjunta { max-height:222px; width:auto; max-width:100%; border-radius:6px; margin-bottom:10px; display:block; image-rendering:auto !important; }
 .preview-adjunto { display:none; position:relative; margin-top:5px; width:fit-content; }
 .preview-adjunto img { max-height:120px; width:auto; max-width:100%; border-radius:6px; border:1px solid rgba(255,255,255,.2); image-rendering:auto !important; }
 .btn-quitar-adjunto { position:absolute; top:-8px; right:-8px; background:#dc3545; color:#fff; border:none; border-radius:50%; width:22px; height:22px; cursor:pointer; font-weight:700; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 4px rgba(0,0,0,.5); font-size:12px; }
-
-/* BOTONES INFERIORES */
 .acciones-comentario { display:flex; gap:15px; margin-bottom:10px; }
 .btn-accion { background:0 0; border:none; color:gray; cursor:pointer; font-size:13px; padding:4px 8px; border-radius:20px; display:flex; align-items:center; gap:4px; transition:all .2s; margin-left:-8px; }
 .btn-accion:hover { color:#fff; background:var(--c-bg-hover); }
-
-/* SISTEMA LIKES CORREGIDO */
 .corazon-icono { width:16px; height:16px; display:inline-block; background-image:url('https://mineblocksstuffs.weebly.com/uploads/1/2/7/3/127300461/like-comment1_orig.png'); background-size:cover; transition:transform .1s; pointer-events:none; }
 .btn-corazon.likeado .corazon-icono { background-image:url('https://mineblocksstuffs.weebly.com/uploads/1/2/7/3/127300461/like-comment2_orig.png'); }
 .btn-corazon:active .corazon-icono { transform:scale(.7) translateY(2px); }
@@ -100,7 +109,7 @@
 .respuesta-individual .avatar { width:30px; height:30px; }
 .formulario-respuesta { display:flex; gap:8px; margin-top:10px; align-items:flex-start; position: relative; }
 
-/* LOADING SKELETON */
+/* SKELETON */
 @keyframes shimmer { 0%{background-position:-400px 0;} 100%{background-position:400px 0;} }
 .skeleton-avatar { background:#e6f2ff; background-image:linear-gradient(90deg,#e6f2ff 0px,#ffffff 40px,#e6f2ff 80px); background-size:800px 100%; animation:shimmer 2s infinite linear; }
 .skeleton-line { height:12px; background:#e6f2ff; margin-bottom:10px; border-radius:4px; background-image:linear-gradient(90deg,#e6f2ff 0px,#ffffff 40px,#e6f2ff 80px); background-size:800px 100%; animation:shimmer 2s infinite linear; }
@@ -142,7 +151,6 @@
   <div id="msgExito" style="display:none;background:#f0ffdb;color:#2b5e0c;border:1px solid #cddc39;padding:10px;border-radius:6px;margin-bottom:15px;text-align:center;font-weight:bold;font-size:14px;"></div>
   
   <div id="listaComentarios">
-    <!-- Skeleton Loading Inicial -->
     <div class="comentario-individual" style="opacity:0.8; padding-top: 15px !important;">
       <div class="avatar skeleton-avatar"></div>
       <div class="comentario-contenido"><div class="skeleton-line skeleton-title"></div><div class="skeleton-line"></div><div class="skeleton-line short"></div></div>
@@ -150,7 +158,6 @@
   </div>
 </div>
 
-<!-- Estructura del Emoji Picker (Solo se crea 1 y se mueve por la pantalla) -->
 <div id="globalEmojiPicker" class="emoji-picker-container">
     <div class="emoji-tabs">
         <div class="emoji-tab active" data-tab="tab-emojis">Emojis</div>
@@ -163,29 +170,9 @@
         <div class="emoji-grid" id="gridEmotesCustom"></div>
     </div>
 </div>
+`;
 
-<script>
-(async function() {
-  // === CONFIGURACIÓN DE EMOTES PERSONALIZADOS ===
-  // Agrega aquí todos los que quieras. Usa el código exacto que deben escribir para invocarlo.
-  const MIS_EMOTES = [
-      { name: ":like:", img: "https://mineblocksstuffs.weebly.com/uploads/1/2/7/3/127300461/like-comment2_orig.png" },
-      { name: ":zanz:", img: "/uploads/1/2/7/3/127300461/zanz-emote_orig.png" }, // Ejemplo
-      { name: ":mb:", img: "/uploads/1/2/7/3/127300461/mineblocks2-icon_orig.png" } // Ejemplo
-  ];
-
-  // Emojis básicos del sistema
-  const EMOJIS_BASE = ["😀","😂","🤣","😊","😍","🥰","😘","😗","😜","🤪","😎","🤩","🥳","😏","😒","😞","😔","😟","😕","🙁","😣","😖","😫","😩","🥺","😢","😭","😤","😠","😡","🤬","🤯","😳","🥵","🥶","😱","😨","😰","😥","😓","🤗","🤔","🤭","🤫","🤥","😶","😐","😑","😬","🙄","😯","😦","😧","😮","😲","🥱","😴","🤤","😪","😵","🤐","🥴","🤢","🤮","🤧","😷","🤒","🤕","🤑","🤠","😈","👿","👹","👺","🤡","💩","👻","💀","☠️","👽","👾","🤖","🎃","😺","😸","😹","😻","😼","😽","🙀","😿","😾","❤️","🧡","💛","💚","💙","💜","🤎","🖤","🤍","💔","❣️","💕","💞","💓","💗","💖","💘","💝","👍","👎","👌","✌️","🤞","🫰","🤟","🤘","🤙","👈","👉","👆","👇","☝️","✋","🤚","🖐","🖖","👋","🤙","💪","🦾","🖕","✍️","🙏","🤝","👏","🙌","👐","🤲","🎉","✨","🔥","✨","🌟","⭐","💥","💦","💨","💫","💯"];
-
-  // 1. Cargar Firebase
-  const loadScript = (src) => new Promise(r => { const s = document.createElement('script'); s.src = src; s.onload = r; document.head.appendChild(s); });
-  if (typeof firebase === 'undefined') {
-    await loadScript("https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js");
-    await loadScript("https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js");
-    await loadScript("https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js");
-  }
-
-  // Lógica General
+  // === 3. LÓGICA DE FIREBASE Y FUNCIONALIDAD ===
   let rutaActual=window.location.pathname,idDePagina=rutaActual.replace(/^\/|\.html$/g,'');if(idDePagina===""||idDePagina==="/")idDePagina="inicio";idDePagina=idDePagina.replace(/[\.\$\#\[\]\/]/g,"_");
   const firebaseConfig={apiKey:"AIzaSyDawixERthu8gHpy-ckb8PMNVOMhlBEQMs",authDomain:"mbwe-multiplayer.firebaseapp.com",databaseURL:"https://mbwe-multiplayer-default-rtdb.firebaseio.com",projectId:"mbwe-multiplayer"};
   if(!firebase.apps.length)firebase.initializeApp(firebaseConfig);
@@ -222,15 +209,11 @@
   const picker = document.getElementById('globalEmojiPicker');
   const gridE = document.getElementById('gridEmojisCore');
   const gridC = document.getElementById('gridEmotesCustom');
-  let currentInputTarget = null; // Saber a qué input enviarle el emoji
+  let currentInputTarget = null; 
 
-  // Llenar Pestaña Emojis Base
   gridE.innerHTML = EMOJIS_BASE.map(e => `<button class="emoji-item" data-val="${e}">${e}</button>`).join('');
-  
-  // Llenar Pestaña Emotes Custom
   gridC.innerHTML = MIS_EMOTES.map(e => `<button class="emoji-item" title="${e.name}" data-val="${e.name}"><img src="${e.img}" class="emote-img"></button>`).join('');
 
-  // Cambiar Pestañas
   document.querySelectorAll('.emoji-tab').forEach(tab => {
       tab.onclick = () => {
           document.querySelectorAll('.emoji-tab').forEach(t => t.classList.remove('active'));
@@ -240,37 +223,30 @@
       }
   });
 
-  // Evento Global para abrir el Picker
   document.addEventListener('click', e => {
-      // Si se hizo click en un botón de emoji (el de main o el de respuestas)
       if (e.target.closest('.btn-emoji-trigger')) {
           const btn = e.target.closest('.btn-emoji-trigger');
           const isMain = btn.dataset.target === 'main';
           currentInputTarget = isMain ? DOM.txt : document.getElementById('input-resp-' + btn.dataset.target);
           
-          // Posicionar y mostrar
           const rect = btn.getBoundingClientRect();
           picker.style.display = 'flex';
           
-          // Calculamos que no se salga de la pantalla por abajo
           let topPos = rect.bottom + window.scrollY;
           if(topPos + 350 > window.innerHeight + window.scrollY) {
-              topPos = rect.top + window.scrollY - 350; // Mostrar arriba si no cabe
+              topPos = rect.top + window.scrollY - 350; 
           }
           
           picker.style.top = topPos + 'px';
-          // Alineado a la derecha del input
           picker.style.left = (rect.right - 300 > 0 ? rect.right - 300 : 10) + 'px'; 
           
-          e.stopPropagation(); // Evitar que el clic lo cierre al instante
+          e.stopPropagation(); 
       } 
-      // Cerrar si se da click fuera
       else if (!e.target.closest('#globalEmojiPicker')) {
           picker.style.display = 'none';
       }
   });
 
-  // Inyectar Emoji/Emote en el Input
   picker.addEventListener('click', e => {
       const item = e.target.closest('.emoji-item');
       if(item && currentInputTarget) {
@@ -281,23 +257,18 @@
           
           currentInputTarget.value = txt.substring(0, start) + val + txt.substring(end);
           currentInputTarget.focus();
-          // Mover cursor
           currentInputTarget.setSelectionRange(start + val.length, start + val.length);
       }
   });
 
-  // Reemplazar texto crudo por imagenes de emotes al renderizar (Como Discord)
   function procEmotes(t) {
       let fText = t;
       MIS_EMOTES.forEach(emote => {
-          // Reemplaza globalmente ":like:" por la <img class="inline-emote">
           const regex = new RegExp(emote.name.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&'), 'g');
           fText = fText.replace(regex, `<img src="${emote.img}" title="${emote.name}" class="inline-emote">`);
       });
       return fText;
   }
-
-  // --- FIN LÓGICA EMOJIS ---
 
   function publicarMsj(t,pId=null,rInput=null){
     const cd=localStorage.getItem('floodT');if(cd&&(Date.now()-cd)<30000){alert(`\u23F3 Spam.`);return;}
@@ -324,27 +295,23 @@
   DOM.txt.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();DOM.btnEnv.click();}});
   DOM.lista.addEventListener('keydown',e=>{if(e.target.classList.contains('input-respuesta')&&e.key==='Enter'&&!e.shiftKey){e.preventDefault();e.target.parentElement.parentElement.querySelector('.btn-enviar-respuesta').click();}});
 
-  // SISTEMA OPTIMIZADO DE DELEGACIÓN DE EVENTOS (Evita re-renderizado completo al dar Like)
   DOM.lista.addEventListener('click',e=>{
     const btn=e.target.closest('button');if(!btn)return;const id=btn.dataset.id;
     
-    // Lógica LIKES (Actualiza directo el DOM sin llamar a render())
     if(btn.classList.contains('btn-corazon')){
       const pId=btn.dataset.pid;
       const path=pId?`comentarios/${idDePagina}/${pId}/respuestas/${id}/likes`:`comentarios/${idDePagina}/${id}/likes`;
       const sKey=pId?`liked_${pId}_${id}`:`liked_${id}`;
-      const spanVal = btn.querySelector('span:not(.corazon-icono)'); // El número
+      const spanVal = btn.querySelector('span:not(.corazon-icono)'); 
       
       const h=localStorage.getItem(sKey),r=db.ref(path);
       if(h){
-          // Quitar Like
           r.transaction(c=>(c||0)>0?c-1:0);
           localStorage.removeItem(sKey);
           btn.classList.remove('likeado');
           let newVal = Math.max(0, parseInt(spanVal.textContent||0)-1);
           spanVal.textContent = newVal;
       }else{
-          // Dar Like
           r.transaction(c=>(c||0)+1);
           localStorage.setItem(sKey,'true');
           btn.classList.add('likeado');
@@ -353,7 +320,6 @@
       }
     }
     
-    // Otros botones
     else if(btn.classList.contains('btn-responder')){
       const z=document.getElementById('form-resp-'+id);z.style.display=z.style.display==='none'?'block':'none';z.querySelector('textarea').focus();
     }else if(btn.classList.contains('btn-enviar-respuesta')){
@@ -368,10 +334,9 @@
     }
   });
 
-  // Procesador de Texto (XSS + YouTube + URLs + EMOTES)
   function procT(t){
       let safe = t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-      safe = procEmotes(safe); // Parsea los emotes antes del HTML de links/youtube
+      safe = procEmotes(safe); 
       return safe.replace(/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/g,'<div style="margin:10px 0;border-radius:8px;overflow:hidden;position:relative;padding-bottom:56.25%;"><iframe src="https://www.youtube.com/embed/$1" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;" allowfullscreen></iframe></div>').replace(/(https?:\/\/[^\s<]+)/g,url=>url.includes('youtube')||url.includes('<img')?url:`<a href="${url}" target="_blank" style="color:var(--accent-blue);text-decoration:underline;word-break:break-all;">${url}</a>`);
   }
   
@@ -423,4 +388,3 @@
     if(appState.limite<appState.coms.length)DOM.lista.innerHTML+=`<button class="btn-cargar-mas" data-action="more">${T.m}</button>`;
   }
 })();
-</script>
