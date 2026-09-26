@@ -112,6 +112,7 @@
   const genHash=(arr)=>arr.map(c=>c.id+(c.nombre||'')+(c.foto||'')+c.aprobado+(c.anclado||false)+(c.respuestas?Object.keys(c.respuestas).map(k=>k+c.respuestas[k].aprobado).join(''):'')).join('|');
   db.ref('comentarios/'+idDePagina).on('value',s=>{
       let nC=[];s.forEach(c=>{const d=c.val();if(typeof d==='object'&&d!==null)nC.push({id:c.key,...d});});
+      nC.sort((x,y)=>(x.anclado&&!y.anclado)?-1:(!x.anclado&&y.anclado)?1:(y.fecha||0)-(x.fecha||0));
       let soloLikes = (appState.coms.length>0&&genHash(appState.coms)===genHash(nC));
       appState.coms=nC;updateUniqueUsers();
       if(soloLikes){
@@ -206,17 +207,20 @@
       const nom=d.nombre||'Usuario',nL=nom.replace(/[\.\$\#\[\]\/]/g,'_');
       const bI=appState.insig[nL]?`<img src="/uploads/1/2/7/3/127300461/featured-user-icon_orig.png" class="badge-img">`:'';
       const l=localStorage.getItem('liked_'+d.id);
+      let isExp=false;let tBtn=document.querySelector(`.btn-toggle-resp[data-id="${d.id}"]`);if(tBtn&&tBtn.dataset.state==='all')isExp=true;
       let html=`<div class="avatar"><img src="${d.foto||'/uploads/1/2/7/3/127300461/default-pfp_596.png'}"></div><div class="comentario-contenido"><div class="cabecera-comentario"><span class="comentario-nombre">${nom}${bI} ${d.anclado?`<span class="badge-anclado">&#x1F4CC; ${T.p}</span>`:''}</span><span class="comentario-fecha">${calculaT(d.fecha||ahora)}</span></div><p class="comentario-texto">${procT(d.texto||'')}</p>${d.imagenAdjunta?`<img src="${d.imagenAdjunta}" class="img-adjunta">`:''}<div class="acciones-comentario"><button class="btn-accion btn-corazon ${l?'likeado':''}" data-id="${d.id}"><span class="corazon-icono"></span><span class="contador-likes">${d.likes||0}</span></button><button class="btn-accion btn-responder" data-id="${d.id}" data-replyuser="${nom}">${T.b}</button></div><div class="caja-respuestas ${d.respuestas&&Object.keys(d.respuestas).length>0?'con-hilo':''}">`;
       if(d.respuestas){
         const vK=Object.keys(d.respuestas).filter(k=>{const r=d.respuestas[k];return typeof r==='object'&&r&&!(r.shadowbanned&&r.nombre!==miNom)&&r.aprobado!==false;});
         html+=vK.map((k,idx)=>{
           const r=d.respuestas[k];const rn=r.nombre||'Usuario',rnL=rn.replace(/[\.\$\#\[\]\/]/g,'_');const rl=localStorage.getItem(`liked_${d.id}_${k}`);
-          let eS=idx>0?`style="display:none;"`:'';
+          let eS=(idx>0&&!isExp)?`style="display:none;"`:(idx>0&&isExp)?`style="display:flex;"`:'';
           return `<div class="respuesta-individual resp-item-${d.id}" ${eS}><div class="avatar"><img src="${r.foto||'/uploads/1/2/7/3/127300461/default-pfp_596.png'}"></div><div><div class="cabecera-comentario"><span class="comentario-nombre">${rn}${appState.insig[rnL]?`<img src="/uploads/1/2/7/3/127300461/featured-user-icon_orig.png" class="badge-img">`:''}</span><span class="comentario-fecha">${calculaT(r.fecha||ahora)}</span></div><p class="comentario-texto">${procT(r.texto||'')}</p>${r.imagenAdjunta?`<img src="${r.imagenAdjunta}" class="img-adjunta">`:''}<div class="acciones-comentario" style="margin-top: 5px; margin-bottom: 0px;"><button class="btn-accion btn-corazon ${rl?'likeado':''}" data-id="${k}" data-pid="${d.id}"><span class="corazon-icono"></span><span class="contador-likes">${r.likes||0}</span></button><button class="btn-accion btn-responder" data-id="${d.id}" data-replyuser="${rn}">${T.b}</button></div></div></div>`;
         }).join('');
         if(vK.length>1){
             const extC=vK.length-1;
-            html+=`<div style="margin-left:46px; margin-top:10px;"><button class="btn-accion btn-toggle-resp" data-id="${d.id}" data-state="partial" data-total="${vK.length}" style="color:#f1f1f1; font-weight:bold;">&#x21B3; Ver ${extC} respuesta${extC>1?'s':''} m\u00E1s</button></div>`;
+            let txt=isExp?`&#x21B3; Ocultar respuestas`:`&#x21B3; Ver ${extC} respuesta${extC>1?'s':''} m\u00E1s`;
+            let st=isExp?'all':'partial';
+            html+=`<div style="margin-left:46px; margin-top:10px;"><button class="btn-accion btn-toggle-resp" data-id="${d.id}" data-state="${st}" data-total="${vK.length}" style="color:#f1f1f1; font-weight:bold;">${txt}</button></div>`;
         }
       }
       return html+`</div><div class="zona-formulario-respuesta" id="form-resp-${d.id}" style="display:none;"><div class="formulario-respuesta"><div class="avatar" style="width:30px;height:30px;flex-shrink:0;"><img src="${DOM.avaAct.src}"></div><div class="input-contenedor"><div class="input-backdrop" id="backdrop-${d.id}"><span class="backdrop-placeholder">${T.r}</span></div><textarea id="input-resp-${d.id}" class="input-respuesta textarea-transparente" data-target="${d.id}" rows="1"></textarea></div><button class="btn-attach" data-action="img" data-id="${d.id}" title="Adjuntar Foto">&#x1F5BC;&#xFE0F;</button><button class="btn-enviar-respuesta btn-send-whatsapp-small" data-id="${d.id}"><svg viewBox="0 0 24 24" width="16" height="16" fill="white"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button></div><div class="preview-adjunto" id="prev-resp-${d.id}" style="margin-left:46px;"><img src=""><button class="btn-quitar-adjunto" data-action="quitar-adj" data-id="${d.id}">X</button></div></div></div>`;
