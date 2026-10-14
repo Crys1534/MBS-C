@@ -9,12 +9,13 @@
   // Los 5 de abajo son de PRUEBA (dibujos SVG metidos en el propio codigo): borralos y pon los tuyos.
   const svg=s=>'data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">'+s+'</svg>');
   const EMOTES={
-    corazon:svg('<path d="M32 58C10 42 3 30 3 21 3 12 10 5 19 5c6 0 11 3 13 8 2-5 7-8 13-8 9 0 16 7 16 16 0 9-7 21-29 37z" fill="#e53935"/><path d="M14 16c3-4 8-5 11-2" stroke="#ff8a80" stroke-width="4" stroke-linecap="round" fill="none"/>'),
-    estrella:svg('<path d="M32 3l8.6 18.4 20.2 2.4-14.9 13.9 3.9 20L32 47.8 14.2 57.7l3.9-20L3.2 23.8l20.2-2.4z" fill="#ffc107" stroke="#f9a825" stroke-width="3" stroke-linejoin="round"/>'),
-    fuego:svg('<path d="M32 3c3 14 18 20 18 37 0 12-8 21-18 21S14 52 14 41c0-8 5-12 8-18 1 6 4 9 7 9-1-10-1-20 3-29z" fill="#ff7043"/><path d="M32 61c-7 0-12-5-12-12 0-8 7-10 9-18 6 5 14 11 14 18 0 7-5 12-11 12z" fill="#ffd54f"/>'),
-    risa:svg('<circle cx="32" cy="32" r="29" fill="#ffca28" stroke="#f9a825" stroke-width="3"/><path d="M15 26q6-9 12 0M37 26q6-9 12 0" stroke="#5d4037" stroke-width="4" stroke-linecap="round" fill="none"/><path d="M14 38h36c0 11-8 18-18 18S14 49 14 38z" fill="#5d4037"/><path d="M23 52q9-8 18 0-9 6-18 0z" fill="#ef5350"/>'),
-    gema:svg('<path d="M32 4l24 22-24 34L8 26z" fill="#26c6da"/><path d="M32 4l24 22H8z" fill="#80deea"/><path d="M32 26l24 0-24 34zM32 26L8 26l24 34z" fill="#00acc1" opacity=".55"/><path d="M11 26h42M20 15l12 11 12-11" stroke="#e0f7fa" stroke-width="2" fill="none" stroke-linejoin="round"/>'),
-  };
+      hearth:'/uploads/1/2/7/3/127300461/like-comment2_orig.png',
+      minifrank:'/uploads/1/2/7/3/127300461/creeper.png',
+      discord:'/uploads/1/2/7/3/127300461/discord-icon.png',
+      trophy:'/uploads/1/2/7/3/127300461/xdestacado_orig.gif',
+      featured:'/uploads/1/2/7/3/127300461/featured-user-icon_orig.png',
+      frank:'/uploads/1/2/7/3/127300461/default-pfp_596.png',
+    };
   // --- No hace falta tocar nada de aqui para abajo ---
   const esImg=v=>/^(https?:)?\/|^data:image\//.test(v);
   const EMO_KEYS=Object.keys(EMOTES).filter(n=>/^[a-z0-9_]{1,24}$/.test(n)&&esImg(EMOTES[n])).slice(0,256);
