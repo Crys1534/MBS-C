@@ -1,6 +1,14 @@
 (async function(){
   const widgetBox=document.getElementById('mb-comentarios-widget');
   if(!widgetBox)return;
+    // ===== EMOTES: edita esta lista para agregar los tuyos =====
+  // Formato:  nombre:'URL de la imagen'   (o un emoji como texto)
+  // En el comentario se escriben como :nombre:  (nombre en minusculas; letras, numeros o _ ; maximo 24)
+  const EMOTES={
+    fuego:'\uD83D\uDD25',
+    corazon:'\u2764\uFE0F',
+    // creeper:'/uploads/1/2/7/3/127300461/creeper.png',   // ejemplo con imagen: quita las // y pon tu URL
+  };
   const loadScript=(src)=>new Promise(r=>{const s=document.createElement('script');s.src=src;s.onload=r;document.head.appendChild(s);});
   if(typeof firebase==='undefined'){
     await loadScript("https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js");
@@ -22,11 +30,31 @@
 .mention-avatar{width:20px;height:20px;border-radius:50%;object-fit:cover;flex-shrink:0;}
 .mention-name{font-size:13px;font-weight:bold;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .mention-item.activo{background:var(--c-bg-hover);}
-.barra-orden{display:flex;align-items:center;gap:8px;margin:0 15px 15px;flex-wrap:wrap;}
-.orden-label{font-size:13px;color:var(--text-muted);}
-.btn-orden{background:transparent;color:#fff;border:1px solid var(--c-border);padding:5px 12px;border-radius:16px;cursor:pointer;font-size:13px;transition:all .2s;}
-.btn-orden:hover{background:var(--c-bg-hover);}
-.btn-orden.activo{background:#fff;color:#000;border-color:#fff;font-weight:bold;}
+.barra-orden{margin:0 15px 15px;}
+.orden-wrap{position:relative;display:inline-block;}
+.btn-orden-menu{background:transparent;border:none;color:#fff;cursor:pointer;display:flex;align-items:center;gap:10px;padding:6px 10px 6px 4px;border-radius:20px;font-size:14px;font-weight:700;}
+.btn-orden-menu:hover{background:var(--c-bg-hover);}
+.orden-menu{position:absolute;top:100%;left:0;margin-top:6px;width:320px;max-width:calc(100vw - 30px);background:#0a1d47;border:1px solid var(--c-border);border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.6);padding:8px 0;z-index:50;}
+.orden-opcion{display:block;width:100%;text-align:left;background:transparent;border:none;color:#fff;cursor:pointer;padding:12px 20px;}
+.orden-opcion:hover{background:var(--c-bg-hover);}
+.orden-opcion.activo{background:rgba(255,255,255,.14);}
+.orden-opcion-t{display:block;font-size:15px;}
+.orden-opcion-d{display:block;font-size:12px;color:var(--text-muted);margin-top:3px;}
+.emote{width:1.6em;height:1.6em;object-fit:contain;vertical-align:middle;margin:0 1px;}
+.emote-txt{font-size:1.2em;vertical-align:middle;}
+.emote-picker{position:absolute;z-index:2147483647;display:none;grid-template-columns:repeat(auto-fill,minmax(38px,1fr));gap:4px;width:280px;max-height:210px;overflow-y:auto;padding:8px;background:#00163e;border:1px solid var(--c-border);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.6);font-family:var(--font-stack);}
+.emote-item{background:transparent;border:none;border-radius:6px;cursor:pointer;padding:4px;display:flex;align-items:center;justify-content:center;font-size:22px;}
+.emote-item:hover{background:var(--c-bg-hover);}
+.emote-item .emote{width:28px;height:28px;margin:0;}
+.comentario-texto strong{font-weight:700;}
+.comentario-texto em{font-style:italic;}
+.comentario-texto del{text-decoration:line-through;opacity:.8;}
+#caja-comentarios code{font-family:ui-monospace,Consolas,Menlo,monospace!important;font-size:13px;background:rgba(255,255,255,.12);padding:1px 5px;border-radius:4px;}
+.spoiler{background:#000;color:transparent;border-radius:3px;cursor:pointer;padding:0 2px;}
+.spoiler:not(.visto) *{visibility:hidden;}
+.spoiler.visto{background:rgba(255,255,255,.12);color:inherit;}
+.vista-previa{display:none;background:rgba(0,0,0,.25);border:1px dashed var(--c-border);border-radius:6px;padding:8px 10px;margin-top:6px;}
+.vp-titulo{font-size:11px;color:var(--text-muted);margin-bottom:4px;}
 #caja-comentarios a.comentario-fecha{color:gray;text-decoration:none;cursor:pointer;}
 #caja-comentarios a.comentario-fecha:hover{text-decoration:underline;}
 </style>
@@ -49,10 +77,10 @@
       </div>
     </div>
     <div class="preview-adjunto" id="cajaPreviewAdjunto"><img id="imgPreviewAdjunto" src=""><button class="btn-quitar-adjunto" id="btnQuitarAdjunto">X</button></div>
-    <div class="controles-formulario"><button class="btn-attach" id="btnImgMain" title="Adjuntar Imagen">&#x1F5BC;&#xFE0F;</button><button id="btnEnviar" class="btn-send-whatsapp"><svg viewBox="0 0 24 24" width="22" height="22" fill="white"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button></div>
+    <div class="controles-formulario"><button class="btn-attach btn-emote" data-action="emote" data-target="main" title="Emotes">&#x1F600;</button><button class="btn-attach" id="btnImgMain" title="Adjuntar Imagen">&#x1F5BC;&#xFE0F;</button><button id="btnEnviar" class="btn-send-whatsapp"><svg viewBox="0 0 24 24" width="22" height="22" fill="white"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button></div>
   </div>
   <div id="msgExito" style="display:none;background:#f0ffdb;color:#2b5e0c;border:1px solid #cddc39;padding:10px;border-radius:6px;margin-bottom:15px;text-align:center;font-weight:bold;font-size:14px;"></div>
-  <div class="barra-orden" id="barraOrden"><span class="orden-label" id="txtOrdenar"></span><button type="button" class="btn-orden activo" data-orden="recientes" id="btnOrdenRec" aria-pressed="true"></button><button type="button" class="btn-orden" data-orden="populares" id="btnOrdenPop" aria-pressed="false"></button></div>
+  <div class="barra-orden" id="barraOrden"><div class="orden-wrap"><button type="button" class="btn-orden-menu" id="btnOrdenMenu" aria-haspopup="true" aria-expanded="false"><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" aria-hidden="true"><path d="M3 18h6v-2H3v2zM3 6v2h18V6H3zm0 7h12v-2H3v2z"/></svg><span id="txtOrdenar"></span></button><div class="orden-menu" id="ordenMenu" style="display:none;" role="menu"></div></div></div>
   <div id="listaComentarios">
     <div class="comentario-individual" style="opacity:0.8; padding-top: 15px !important;"><div class="avatar skeleton-avatar"></div><div class="comentario-contenido"><div class="skeleton-line skeleton-title"></div><div class="skeleton-line"></div><div class="skeleton-line short"></div></div></div>
   </div>
@@ -66,30 +94,75 @@
   let imgCover="";document.querySelectorAll("meta").forEach(x=>{if((x.getAttribute("property")||"").replace(/\s/g,"")==="og:image")imgCover=x.getAttribute("content")});
   if(imgCover)db.ref("imagenes_paginas/"+idDePagina).set(imgCover);
   const DOM={txtTit:document.getElementById('txtTitulo'),lista:document.getElementById('listaComentarios'),nom:document.getElementById('nombreUsuario'),txt:document.getElementById('textoComentario'),btnEnv:document.getElementById('btnEnviar'),prevBox:document.getElementById('cajaPreviewAdjunto'),prevImg:document.getElementById('imgPreviewAdjunto'),avaAct:document.querySelector('#avatarUsuarioActual img'),inpFile:document.getElementById('inputAvatarFile')};
-  let appState={usr:null,pfpL:null,imgAdjMain:null,imgAdjResp:{},limite:10,coms:[],insig:{},shadow:{},orden:'recientes',rank:{}};
+  let appState={usr:null,pfpL:null,imgAdjMain:null,imgAdjResp:{},limite:10,coms:[],insig:{},shadow:{},orden:'populares',rank:{}};
   let targetActivoAdjunto=null;let uniqueUsers=[];let activeTextarea=null;let mentionStartIndex=-1;let mentionIdx=0;
   const inImg=document.createElement('input');inImg.type='file';inImg.accept='image/png, image/jpeg, image/webp';
   const localeDict={en:{t:"comments",t1:"comment",g:"Sign in with Google",o:"Sign out",l:"Signed in with Google",u:"Username",c:"Write a comment...",r:"Write a reply...",b:"Reply",m:"Load more comments...",a:"ago",j:"Just now",p:"Pinned",s:"Comment sent!",y:"Year",mo:"Month",d:"Day",h:"Hour",mi:"Minute",ord:"Sort by",rec:"Newest",pop:"Top",lnk:"Link",cpl:"Copy link",cpd:"Link copied!"},pt:{t:"coment\u00E1rios",t1:"coment\u00E1rio",g:"Entrar com o Google",o:"Sair",l:"Conectado com o Google",u:"Nome de usu\u00E1rio",c:"Escreva um coment\u00E1rio...",r:"Escreva uma resposta...",b:"Responder",m:"Carregar mais coment\u00E1rios...",a:"atr\u00E1s",j:"Agora mesmo",p:"Fixado",s:"Coment\u00E1rio enviado!",y:"Ano",mo:"M\u00EAs",d:"Dia",h:"Hora",mi:"Minuto",ord:"Ordenar por",rec:"Mais recentes",pop:"Mais populares",lnk:"Link",cpl:"Copiar link",cpd:"Link copiado!"},es:{t:"comentarios",t1:"comentario",g:"Iniciar sesi\u00F3n con Google",o:"Cerrar sesi\u00F3n",l:"Conectado con Google",u:"Usuario",c:"Escribe un comentario...",r:"Escribe una respuesta...",b:"Responder",m:"Cargar m\u00E1s comentarios...",a:"hace",j:"Justo ahora",p:"Fijado",s:"Comentario enviado!",y:"A\u00F1o",mo:"Mes",d:"D\u00EDa",h:"Hora",mi:"Minuto",ord:"Ordenar por",rec:"M\u00E1s recientes",pop:"M\u00E1s populares",lnk:"Enlace",cpl:"Copiar enlace",cpd:"\u00A1Enlace copiado!"}};
   const nL=navigator.language.substring(0,2);const L=localeDict[nL]?nL:'es';const T=localeDict[L];
   document.getElementById('btnGoogle').textContent=T.g;document.getElementById('btnSalir').textContent=T.o;DOM.nom.placeholder=T.u;document.getElementById('backdrop-main').innerHTML=`<span class="backdrop-placeholder">${T.c}</span>`;DOM.nom.value=localStorage.getItem('savedName')||'';appState.pfpL=localStorage.getItem('savedAvatar');DOM.avaAct.src=appState.pfpL||"/uploads/1/2/7/3/127300461/default-pfp_596.png";DOM.nom.oninput=e=>localStorage.setItem('savedName',e.target.value);
-  document.getElementById('txtOrdenar').textContent=T.ord;document.getElementById('btnOrdenRec').textContent=T.rec;document.getElementById('btnOrdenPop').textContent=T.pop;
+    Object.assign(localeDict.en,{ant:"Oldest",popD:"Comments with the most likes first",antD:"Oldest comments first",recD:"Newest comments first",vp:"Preview"});
+  Object.assign(localeDict.pt,{ant:"Mais antigos",popD:"Coment\u00E1rios com mais curtidas primeiro",antD:"Coment\u00E1rios mais antigos primeiro",recD:"Coment\u00E1rios mais recentes primeiro",vp:"Pr\u00E9-visualiza\u00E7\u00E3o"});
+  Object.assign(localeDict.es,{ant:"M\u00E1s antiguos",popD:"Los comentarios con m\u00E1s likes primero",antD:"Los comentarios m\u00E1s viejos primero",recD:"Los comentarios m\u00E1s nuevos primero",vp:"Vista previa"});
+  document.getElementById('txtOrdenar').textContent=T.ord;
+  document.getElementById('ordenMenu').innerHTML=[['populares','pop','popD'],['antiguos','ant','antD'],['recientes','rec','recD']].map(([k,t,d])=>`<button type="button" class="orden-opcion${k===appState.orden?' activo':''}" data-orden="${k}" role="menuitemradio" aria-checked="${k===appState.orden}"><span class="orden-opcion-t">${T[t]}</span><span class="orden-opcion-d">${T[d]}</span></button>`).join('');
 
   /* ===== ORDEN: M\u00E1s recientes / M\u00E1s populares ===== */
   // El ranking de likes se "congela" al elegir el orden, para que los comentarios no salten al dar like.
   // Volver a pulsar el bot\u00F3n activo refresca el ranking.
   const rankLikes=c=>{if(appState.rank[c.id]===undefined)appState.rank[c.id]=c.likes||0;return appState.rank[c.id];};
-  const cmpComs=(x,y)=>{
+    const cmpComs=(x,y)=>{
     if(x.anclado&&!y.anclado)return -1;
     if(!x.anclado&&y.anclado)return 1;
     if(appState.orden==='populares'){const dl=rankLikes(y)-rankLikes(x);if(dl)return dl;}
+    if(appState.orden==='antiguos')return (x.fecha||0)-(y.fecha||0);
     return (y.fecha||0)-(x.fecha||0);
   };
-  function syncOrden(){document.querySelectorAll('.btn-orden').forEach(b=>{const on=b.dataset.orden===appState.orden;b.classList.toggle('activo',on);b.setAttribute('aria-pressed',on);});}
-
+  function syncOrden(){document.querySelectorAll('.orden-opcion').forEach(b=>{const on=b.dataset.orden===appState.orden;b.classList.toggle('activo',on);b.setAttribute('aria-checked',on);});}
+  function cerrarMenuOrden(){document.getElementById('ordenMenu').style.display='none';document.getElementById('btnOrdenMenu').setAttribute('aria-expanded','false');}
+  function toggleMenuOrden(){const m=document.getElementById('ordenMenu');const abrir=m.style.display==='none';m.style.display=abrir?'block':'none';document.getElementById('btnOrdenMenu').setAttribute('aria-expanded',abrir);}
+  // Cierra los menus (orden / emotes) al hacer clic fuera o pulsar Esc
+  document.addEventListener('click',e=>{
+    if(!e.target.closest('.orden-wrap'))cerrarMenuOrden();
+    if(!e.target.closest('.emote-picker')&&!e.target.closest('.btn-emote'))cerrarEmotes();
+  });
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'){cerrarMenuOrden();cerrarEmotes();}});
+  
   /* ===== ENLACE PERMANENTE (#com_ID / #resp_ID) ===== */
   const permaUrl=frag=>location.origin+location.pathname+location.search+'#'+frag;
-  const parseHash=()=>{try{const m=location.hash.match(/^#(com|resp)_(.+)$/);return m?{tipo:m[1],id:decodeURIComponent(m[2])}:null;}catch(e){return null;}};
+    const parseHash=()=>{try{const m=location.hash.match(/^#(?:c-|com_|resp_)(.+)$/);return m?{cod:decodeURIComponent(m[1])}:null;}catch(e){return null;}};
   let hashObj=parseHash();
+    /* ===== CODIGOS DE ENLACE (#c-xK7p2): 3 numeros + 1 minuscula + 1 mayuscula, sin caracteres confusos ===== */
+  const CODE_DIG='23456789',CODE_MIN='abcdefghijkmnpqrstuvwxyz',CODE_MAY='ABCDEFGHJKLMNPQRSTUVWXYZ';
+  function codigosUsados(){
+    const s=new Set();
+    appState.coms.forEach(c=>{if(c.num)s.add(c.num);if(c.respuestas)Object.values(c.respuestas).forEach(r=>{if(r&&r.num)s.add(r.num);});});
+    return s;
+  }
+  function nuevoCodigo(usados){
+    const pick=s=>s[Math.floor(Math.random()*s.length)];
+    for(let i=0;i<50;i++){
+      const a=[pick(CODE_DIG),pick(CODE_DIG),pick(CODE_DIG),pick(CODE_MIN),pick(CODE_MAY)];
+      for(let j=a.length-1;j>0;j--){const k=Math.floor(Math.random()*(j+1));[a[j],a[k]]=[a[k],a[j]];}
+      const cod=a.join('');
+      if(!usados.has(cod)){usados.add(cod);return cod;}
+    }
+    return null;
+  }
+  // Numera los comentarios y respuestas que aun no tienen codigo. Solo lo hace tu cuenta admin (ADMIN_UID), una vez por carga de pagina.
+  let codigosAsignados=false;
+  function asignarCodigosFaltantes(u){
+    const usr=u||appState.usr;
+    if(codigosAsignados||!usr||usr.uid!==ADMIN_UID||!appState.coms.length)return;
+    const usados=codigosUsados(),upd={};let n=0;
+    appState.coms.forEach(c=>{
+      if(!c.num){const cod=nuevoCodigo(usados);if(cod){upd[c.id+'/num']=cod;n++;}}
+      if(c.respuestas)Object.keys(c.respuestas).forEach(k=>{const r=c.respuestas[k];if(r&&typeof r==='object'&&!r.num){const cod=nuevoCodigo(usados);if(cod){upd[c.id+'/respuestas/'+k+'/num']=cod;n++;}}});
+    });
+    if(!n)return;
+    codigosAsignados=true;
+    db.ref('comentarios/'+idDePagina).update(upd).then(()=>console.log('[comentarios] codigos asignados: '+n)).catch(e=>console.warn('[comentarios] no se pudieron asignar codigos:',e.message));
+  }
+  auth.onAuthStateChanged(u=>{if(u)asignarCodigosFaltantes(u);});
   function destacar(el){
     el.style.transition='background-color .4s,box-shadow .4s';
     el.style.borderRadius='6px';
@@ -101,9 +174,11 @@
     if(!hashObj||!appState.coms.length)return;
     const miNom=appState.usr?appState.usr.displayName:(DOM.nom.value.trim()||"Invitado");
     const oculto=x=>x.aprobado===false||(x.shadowbanned&&x.nombre!==miNom);
-    let padre=null,respId=null;
-    if(hashObj.tipo==='com'){padre=appState.coms.find(c=>c.id===hashObj.id);}
-    else{padre=appState.coms.find(c=>!!(c.respuestas&&c.respuestas[hashObj.id]));if(padre)respId=hashObj.id;}
+        let padre=null,respId=null;
+    for(const c of appState.coms){
+      if(c.num===hashObj.cod||c.id===hashObj.cod){padre=c;break;}
+      if(c.respuestas){const k=Object.keys(c.respuestas).find(k=>{const r=c.respuestas[k];return r&&(r.num===hashObj.cod||k===hashObj.cod);});if(k){padre=c;respId=k;break;}}
+    }
     if(!padre||oculto(padre)||(respId&&oculto(padre.respuestas[respId]))){hashObj=null;return;}
     const idx=appState.coms.indexOf(padre);
     if(idx>=appState.limite){appState.limite=Math.ceil((idx+1)/10)*10;render();return;}
@@ -155,7 +230,7 @@
     procesarImagen(f,ta.dataset.target);
   });
   function updateBackdrop(ta){
-    const tg=ta.dataset.target;const bd=document.getElementById('backdrop-'+tg);if(!bd)return;
+    const tg=ta.dataset.target;const bd=document.getElementById('backdrop-'+tg);if(!bd)return;vistaPrevia(ta);
     let v=ta.value;if(!v){bd.innerHTML=`<span class="backdrop-placeholder">${tg==='main'?T.c:T.r}</span>`;return;}
     let safe=v.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     uniqueUsers.forEach(u=>{const eN=u.nombre.replace(/[-\/\\^$*+?.()|[\]{}]/g,'\\$&');const reg=new RegExp(`(^|\\s)@${eN}(?=\\s|$)`,'g');safe=safe.replace(reg,`$1<span class="mention-text">@${u.nombre}</span>`);});
@@ -168,7 +243,7 @@
     const imgData=pId?appState.imgAdjResp[pId]:appState.imgAdjMain;
     if(t.trim()===""&&!imgData)return;
     const data={nombre:n,texto:t,fecha:firebase.database.ServerValue.TIMESTAMP,foto:appState.usr?appState.usr.photoURL:appState.pfpL,likes:0,shadowbanned:!!appState.shadow[n.replace(/[\.\$\#\[\]\/]/g,'_')],aprobado:false};
-    if(imgData)data.imagenAdjunta=imgData;
+    if(imgData)data.imagenAdjunta=imgData;const num=nuevoCodigo(codigosUsados());if(num)data.num=num;
     db.ref(pId?`comentarios/${idDePagina}/${pId}/respuestas`:`comentarios/${idDePagina}`).push(data).then(()=>{
       localStorage.setItem('floodT',Date.now());
       const mE=document.getElementById('msgExito');mE.textContent="\u2705 "+T.s;mE.style.display='block';setTimeout(()=>mE.style.display='none',5000);
@@ -192,12 +267,12 @@
   db.ref('insignias').on('value',s=>{appState.insig=s.val()||{};if(appState.coms.length)render();});
   db.ref('shadowbans').on('value',s=>{appState.shadow=s.val()||{};if(appState.coms.length)render();});
   const syD=(c,a,pref,iF,cF,hF,t='div')=>{if(!a.length)return 0;let I=new Set();a.forEach(x=>{let id=pref+iF(x);let el=document.getElementById(id);let ht=hF(x);let cl=cF(x);I.add(id);if(!el){el=document.createElement(t);el.id=id;if(cl)el.className=cl;el.innerHTML=ht;el.dataset.h=ht;c.appendChild(el);}else{if(cl&&el.className!==cl){el.className=cl;}if(el.dataset.h!==ht){el.innerHTML=ht;el.dataset.h=ht;}}});[...c.children].forEach(n=>{if(!I.has(n.id))n.remove();});let dN=[...c.children];a.forEach((x,j)=>{let id=pref+iF(x);if(dN[j]&&dN[j].id!==id){c.insertBefore(document.getElementById(id),c.children[j]);dN=[...c.children];}});return 1;};
-  const genHash=(arr)=>arr.map(c=>c.id+(c.nombre||'')+(c.foto||'')+c.aprobado+(c.anclado||false)+(c.respuestas?Object.keys(c.respuestas).map(k=>k+c.respuestas[k].aprobado).join(''):'')).join('|');
+  const genHash=(arr)=>arr.map(c=>c.id+(c.num||'')+(c.nombre||'')+(c.foto||'')+c.aprobado+(c.anclado||false)+(c.respuestas?Object.keys(c.respuestas).map(k=>k+(c.respuestas[k].num||'')+c.respuestas[k].aprobado).join(''):'')).join('|');
   db.ref('comentarios/'+idDePagina).on('value',s=>{
       let nC=[];s.forEach(c=>{const d=c.val();if(typeof d==='object'&&d!==null)nC.push({id:c.key,...d});});
       nC.sort(cmpComs);
       let soloLikes = (appState.coms.length>0&&genHash(appState.coms)===genHash(nC));
-      appState.coms=nC;updateUniqueUsers();
+      appState.coms=nC;updateUniqueUsers();setTimeout(asignarCodigosFaltantes,0);
       if(soloLikes){
           nC.forEach(c=>{
               let lBtn=document.querySelector(`.btn-corazon[data-id="${c.id}"]:not([data-pid]) .contador-likes`);
@@ -260,6 +335,7 @@ mBox.scrollTop=0;mentionIdx=0;marcarMencion(false);
     }else if(!e.target.closest('#mentionsDropdown')&&e.target.tagName!=='TEXTAREA'){mBox.style.display='none';}
   });
   document.getElementById('caja-comentarios').addEventListener('click',e=>{
+    const sp=e.target.closest('.spoiler');if(sp){sp.classList.toggle('visto');return;}
     // Clic en la fecha = enlace permanente (sin salto brusco del navegador)
     const lnk=e.target.closest('a.enlace-permanente');
     if(lnk){
@@ -285,10 +361,14 @@ mBox.scrollTop=0;mentionIdx=0;marcarMencion(false);
     }else if(btn.classList.contains('btn-enviar-respuesta')){
       const inp=btn.parentElement.querySelector('.input-respuesta');publicarMsj(inp.value,id,inp);document.getElementById('form-resp-'+id).style.display='none';
     }else if(btn.classList.contains('btn-enlace')){
-      const url=permaUrl(btn.dataset.tipo+'_'+id);
+      const url=permaUrl('c-'+btn.dataset.cod);
       copiarTexto(url).then(ok=>{if(!ok)return;const o=btn.innerHTML;btn.innerHTML='&#x2705; '+T.cpd;setTimeout(()=>{if(btn.isConnected)btn.innerHTML=o;},1800);});
-    }else if(btn.classList.contains('btn-orden')){
-      appState.orden=btn.dataset.orden;appState.rank={};appState.limite=10;syncOrden();render();
+        }else if(btn.id==='btnOrdenMenu'){
+      toggleMenuOrden();
+    }else if(btn.classList.contains('orden-opcion')){
+      appState.orden=btn.dataset.orden;appState.rank={};appState.limite=10;syncOrden();cerrarMenuOrden();render();
+    }else if(btn.dataset.action==='emote'){
+      abrirEmotes(btn);
     }else if(btn.dataset.action==='img'){
       targetActivoAdjunto=id;inImg.click();
     }else if(btn.dataset.action==='quitar-adj'){
@@ -301,10 +381,59 @@ mBox.scrollTop=0;mentionIdx=0;marcarMencion(false);
       else{allR.forEach(el=>{el.style.display='none';el.classList.remove('anim-resp');});btn.dataset.state='none';btn.innerHTML=`&#x21B3; Ver ${tot} respuesta${tot>1?'s':''}`;}
     }
   });
+    /* ===== EMOTES + FORMATO LIGERO ===== */
+  function hasEmote(n){return Object.prototype.hasOwnProperty.call(EMOTES,n);}
+  function emoteHTML(n){const v=EMOTES[n];return /^(https?:)?\/|^data:image\//.test(v)?`<img class="emote" src="${v}" alt=":${n}:" title=":${n}:" loading="lazy" decoding="async">`:`<span class="emote-txt" title=":${n}:">${v}</span>`;}
+  function insertarEnTextarea(ta,txt){
+    const s=ta.selectionStart,e=ta.selectionEnd,v=ta.value;
+    ta.value=v.slice(0,s)+txt+v.slice(e);
+    const p=s+txt.length;ta.focus();ta.setSelectionRange(p,p);
+    ta.style.height='auto';ta.style.height=ta.scrollHeight+'px';updateBackdrop(ta);
+  }
+  let emoteBox=null,emoteTA=null,emoteKey='';
+  function cerrarEmotes(){if(emoteBox)emoteBox.style.display='none';}
+  function abrirEmotes(btn){
+    const key=(btn.dataset.target||'')+(btn.dataset.id||'');
+    if(emoteBox&&emoteBox.style.display==='grid'&&emoteKey===key){cerrarEmotes();return;}
+    if(!emoteBox){
+      emoteBox=document.createElement('div');emoteBox.className='emote-picker';document.body.appendChild(emoteBox);
+      emoteBox.addEventListener('click',e=>{const it=e.target.closest('.emote-item');if(it&&emoteTA){insertarEnTextarea(emoteTA,':'+it.dataset.n+': ');cerrarEmotes();}});
+    }
+    const ks=Object.keys(EMOTES);
+    emoteBox.innerHTML=ks.length?ks.map(n=>`<button type="button" class="emote-item" data-n="${n}" title=":${n}:">${emoteHTML(n)}</button>`).join(''):'<span style="grid-column:1/-1;color:#8b949e;font-size:13px;">Sin emotes</span>';
+    emoteKey=key;emoteTA=btn.dataset.target==='main'?DOM.txt:document.getElementById('input-resp-'+btn.dataset.id);
+    emoteBox.style.display='grid';
+    const r=btn.getBoundingClientRect(),h=emoteBox.offsetHeight,abajo=window.innerHeight-r.bottom>h+12;
+    emoteBox.style.top=(abajo?r.bottom+window.scrollY+6:r.top+window.scrollY-h-6)+'px';
+    emoteBox.style.left=Math.max(8,Math.min(r.right+window.scrollX-280,window.scrollX+document.documentElement.clientWidth-288))+'px';
+  }
+  // Vista previa en vivo: muestra como quedara el comentario (formato + emotes) mientras escribes
+  function vistaPrevia(ta){
+    const cont=ta.closest('.input-contenedor');if(!cont)return;
+    const anchor=cont.parentElement.classList.contains('formulario-respuesta')?cont.parentElement:cont;
+    let pv=anchor.nextElementSibling;
+    if(!pv||!pv.classList.contains('vista-previa')){pv=document.createElement('div');pv.className='vista-previa';anchor.insertAdjacentElement('afterend',pv);}
+    const v=ta.value;let html='';
+    if(/[*_~`|:]/.test(v)){const h=procT(v);if(/<(strong|em|del|code)>|class="(spoiler|emote)/.test(h))html=h;}
+    if(!html){pv.style.display='none';return;}
+    pv.innerHTML='<div class="vp-titulo">'+T.vp+'</div><p class="comentario-texto">'+html+'</p>';pv.style.display='block';
+  }
+  // Formato:  **negrita**  *cursiva* o _cursiva_  ~~tachado~~  `codigo`  ||spoiler||   y emotes :nombre:
   function procT(t){
-    let safe=t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    uniqueUsers.forEach(u=>{const eN=u.nombre.replace(/[-\/\\^$*+?.()|[\]{}]/g,'\\$&');const reg=new RegExp(`(^|\\s)@${eN}(?=\\s|$)`,'g');safe=safe.replace(reg,`$1<span class="mention-text">@${u.nombre}</span>`);});
-    return safe.replace(/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/g,'<div style="margin:10px 0; max-width:378px;"><div style="border-radius:8px;overflow:hidden;position:relative;padding-bottom:56.25%;"><iframe src="https://www.youtube.com/embed/$1" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;" allowfullscreen></iframe></div></div>').replace(/(https?:\/\/[^\s<"']+)/g,url=>url.includes('/embed/')?url:`<a href="${url}" target="_blank">${url}</a>`);
+    let safe=t.replace(/[\u0001\u0002]/g,'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const guard=[],keep=h=>'\u0001'+(guard.push(h)-1)+'\u0002';
+    safe=safe.replace(/`([^`\n]+)`/g,(m,c)=>keep('<code>'+c+'</code>'));
+    safe=safe.replace(/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/g,(m,id)=>keep('<div style="margin:10px 0; max-width:378px;"><div style="border-radius:8px;overflow:hidden;position:relative;padding-bottom:56.25%;"><iframe src="https://www.youtube.com/embed/'+id+'" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;" allowfullscreen></iframe></div></div>'));
+    safe=safe.replace(/(https?:\/\/[^\s<"'\u0001\u0002]+)/g,url=>keep('<a href="'+url+'" target="_blank">'+url+'</a>'));
+    uniqueUsers.forEach(u=>{const eN=u.nombre.replace(/[-\/\\^$*+?.()|[\]{}]/g,'\\$&');const reg=new RegExp(`(^|\\s)@${eN}(?=\\s|$)`,'g');safe=safe.replace(reg,(m,pre)=>pre+keep(`<span class="mention-text">@${u.nombre}</span>`));});
+    safe=safe.replace(/:([a-zA-Z0-9_]{1,24}):/g,(m,n)=>hasEmote(n.toLowerCase())?keep(emoteHTML(n.toLowerCase())):m);
+    safe=safe
+      .replace(/\*\*([^\s*](?:.*?[^\s*])?)\*\*/g,'<strong>$1</strong>')
+      .replace(/(^|[\s(>|~])\*(\S(?:.*?\S)?)\*(?=[\s.,;:!?)<|~]|$)/g,'$1<em>$2</em>')
+      .replace(/(^|[\s(>|~])_(\S(?:.*?\S)?)_(?=[\s.,;:!?)<|~]|$)/g,'$1<em>$2</em>')
+      .replace(/~~(\S(?:.*?\S)?)~~/g,'<del>$1</del>')
+      .replace(/\|\|(\S(?:.*?\S)?)\|\|/g,'<span class="spoiler">$1</span>');
+    return safe.replace(/\u0001(\d+)\u0002/g,(m,i)=>guard[i]);
   }
   function calculaT(f){
     const s=Math.floor((Date.now()-f)/1000);
@@ -327,13 +456,13 @@ mBox.scrollTop=0;mentionIdx=0;marcarMencion(false);
       const bI=appState.insig[nL]?`<img src="/uploads/1/2/7/3/127300461/featured-user-icon_orig.png" class="badge-img" loading="lazy" decoding="async">`:'';
       const l=localStorage.getItem('liked_'+d.id);
       let isExp=false;let tBtn=document.querySelector(`.btn-toggle-resp[data-id="${d.id}"]`);if(tBtn&&tBtn.dataset.state==='all')isExp=true;
-      let html=`<div class="avatar"><img src="${d.foto||'/uploads/1/2/7/3/127300461/default-pfp_596.png'}" loading="lazy" decoding="async"></div><div class="comentario-contenido"><div class="cabecera-comentario"><span class="comentario-nombre">${nom}${bI} ${d.anclado?`<span class="badge-anclado">&#x1F4CC; ${T.p}</span>`:''}</span><a class="comentario-fecha enlace-permanente" href="${permaUrl('com_'+d.id)}">${calculaT(d.fecha||ahora)}</a></div><p class="comentario-texto">${procT(d.texto||'')}</p>${d.imagenAdjunta?`<img src="${d.imagenAdjunta}" class="img-adjunta" loading="lazy" decoding="async">`:''}<div class="acciones-comentario"><button class="btn-accion btn-corazon ${l?'likeado':''}" data-id="${d.id}"><span class="corazon-icono"></span><span class="contador-likes">${d.likes||0}</span></button><button class="btn-accion btn-responder" data-id="${d.id}" data-replyuser="${nom}">${T.b}</button><button class="btn-accion btn-enlace" data-id="${d.id}" data-tipo="com" title="${T.cpl}">&#x1F517; ${T.lnk}</button></div><div class="caja-respuestas ${d.respuestas&&Object.keys(d.respuestas).length>0?'con-hilo':''}">`;
+      let html=`<div class="avatar"><img src="${d.foto||'/uploads/1/2/7/3/127300461/default-pfp_596.png'}" loading="lazy" decoding="async"></div><div class="comentario-contenido"><div class="cabecera-comentario"><span class="comentario-nombre">${nom}${bI} ${d.anclado?`<span class="badge-anclado">&#x1F4CC; ${T.p}</span>`:''}</span><a class="comentario-fecha enlace-permanente" href="${permaUrl('c-'+(d.num||d.id))}">${calculaT(d.fecha||ahora)}</a></div><p class="comentario-texto">${procT(d.texto||'')}</p>${d.imagenAdjunta?`<img src="${d.imagenAdjunta}" class="img-adjunta" loading="lazy" decoding="async">`:''}<div class="acciones-comentario"><button class="btn-accion btn-corazon ${l?'likeado':''}" data-id="${d.id}"><span class="corazon-icono"></span><span class="contador-likes">${d.likes||0}</span></button><button class="btn-accion btn-responder" data-id="${d.id}" data-replyuser="${nom}">${T.b}</button><button class="btn-accion btn-enlace" data-cod="${d.num||d.id}" title="${T.cpl}">&#x1F517; ${T.lnk}</button></div><div class="caja-respuestas ${d.respuestas&&Object.keys(d.respuestas).length>0?'con-hilo':''}">`;
       if(d.respuestas){
         const vK=Object.keys(d.respuestas).filter(k=>{const r=d.respuestas[k];return typeof r==='object'&&r&&!(r.shadowbanned&&r.nombre!==miNom)&&r.aprobado!==false;});
         html+=vK.map((k,idx)=>{
           const r=d.respuestas[k];const rn=r.nombre||'Usuario',rnL=rn.replace(/[\.\$\#\[\]\/]/g,'_');const rl=localStorage.getItem(`liked_${d.id}_${k}`);
           let eS=(idx>0&&!isExp)?`style="display:none;"`:(idx>0&&isExp)?`style="display:flex;"`:'';
-          return `<div class="respuesta-individual resp-item-${d.id}" id="resp_${k}" ${eS}><div class="avatar"><img src="${r.foto||'/uploads/1/2/7/3/127300461/default-pfp_596.png'}" loading="lazy" decoding="async"></div><div><div class="cabecera-comentario"><span class="comentario-nombre">${rn}${appState.insig[rnL]?`<img src="/uploads/1/2/7/3/127300461/featured-user-icon_orig.png" class="badge-img" loading="lazy" decoding="async">`:''}</span><a class="comentario-fecha enlace-permanente" href="${permaUrl('resp_'+k)}">${calculaT(r.fecha||ahora)}</a></div><p class="comentario-texto">${procT(r.texto||'')}</p>${r.imagenAdjunta?`<img src="${r.imagenAdjunta}" class="img-adjunta" loading="lazy" decoding="async">`:''}<div class="acciones-comentario" style="margin-top: 5px; margin-bottom: 0px;"><button class="btn-accion btn-corazon ${rl?'likeado':''}" data-id="${k}" data-pid="${d.id}"><span class="corazon-icono"></span><span class="contador-likes">${r.likes||0}</span></button><button class="btn-accion btn-responder" data-id="${d.id}" data-replyuser="${rn}">${T.b}</button><button class="btn-accion btn-enlace" data-id="${k}" data-tipo="resp" title="${T.cpl}">&#x1F517; ${T.lnk}</button></div></div></div>`;
+          return `<div class="respuesta-individual resp-item-${d.id}" id="resp_${k}" ${eS}><div class="avatar"><img src="${r.foto||'/uploads/1/2/7/3/127300461/default-pfp_596.png'}" loading="lazy" decoding="async"></div><div><div class="cabecera-comentario"><span class="comentario-nombre">${rn}${appState.insig[rnL]?`<img src="/uploads/1/2/7/3/127300461/featured-user-icon_orig.png" class="badge-img" loading="lazy" decoding="async">`:''}</span><a class="comentario-fecha enlace-permanente" href="${permaUrl('c-'+(r.num||k))}">${calculaT(r.fecha||ahora)}</a></div><p class="comentario-texto">${procT(r.texto||'')}</p>${r.imagenAdjunta?`<img src="${r.imagenAdjunta}" class="img-adjunta" loading="lazy" decoding="async">`:''}<div class="acciones-comentario" style="margin-top: 5px; margin-bottom: 0px;"><button class="btn-accion btn-corazon ${rl?'likeado':''}" data-id="${k}" data-pid="${d.id}"><span class="corazon-icono"></span><span class="contador-likes">${r.likes||0}</span></button><button class="btn-accion btn-responder" data-id="${d.id}" data-replyuser="${rn}">${T.b}</button><button class="btn-accion btn-enlace" data-cod="${r.num||k}" title="${T.cpl}">&#x1F517; ${T.lnk}</button></div></div></div>`;
         }).join('');
         if(vK.length>1){
             const extC=vK.length-1;
@@ -342,7 +471,7 @@ mBox.scrollTop=0;mentionIdx=0;marcarMencion(false);
             html+=`<div style="margin-left:46px; margin-top:10px;"><button class="btn-accion btn-toggle-resp" data-id="${d.id}" data-state="${st}" data-total="${vK.length}" style="color:#f1f1f1; font-weight:bold;">${txt}</button></div>`;
         }
       }
-      return html+`</div><div class="zona-formulario-respuesta" id="form-resp-${d.id}" style="display:none;"><div class="formulario-respuesta"><div class="avatar" style="width:30px;height:30px;flex-shrink:0;"><img src="${DOM.avaAct.src}" loading="lazy" decoding="async"></div><div class="input-contenedor"><div class="input-backdrop" id="backdrop-${d.id}"><span class="backdrop-placeholder">${T.r}</span></div><textarea id="input-resp-${d.id}" class="input-respuesta textarea-transparente" data-target="${d.id}" rows="1"></textarea></div><button class="btn-attach" data-action="img" data-id="${d.id}" title="Adjuntar Foto">&#x1F5BC;&#xFE0F;</button><button class="btn-enviar-respuesta btn-send-whatsapp-small" data-id="${d.id}"><svg viewBox="0 0 24 24" width="16" height="16" fill="white"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button></div><div class="preview-adjunto" id="prev-resp-${d.id}" style="margin-left:46px;"><img src=""><button class="btn-quitar-adjunto" data-action="quitar-adj" data-id="${d.id}">X</button></div></div></div>`;
+      return html+`</div><div class="zona-formulario-respuesta" id="form-resp-${d.id}" style="display:none;"><div class="formulario-respuesta"><div class="avatar" style="width:30px;height:30px;flex-shrink:0;"><img src="${DOM.avaAct.src}" loading="lazy" decoding="async"></div><div class="input-contenedor"><div class="input-backdrop" id="backdrop-${d.id}"><span class="backdrop-placeholder">${T.r}</span></div><textarea id="input-resp-${d.id}" class="input-respuesta textarea-transparente" data-target="${d.id}" rows="1"></textarea></div><button class="btn-attach btn-emote" data-action="emote" data-id="${d.id}" title="Emotes">&#x1F600;</button><button class="btn-attach" data-action="img" data-id="${d.id}" title="Adjuntar Foto">&#x1F5BC;&#xFE0F;</button><button class="btn-enviar-respuesta btn-send-whatsapp-small" data-id="${d.id}"><svg viewBox="0 0 24 24" width="16" height="16" fill="white"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button></div><div class="preview-adjunto" id="prev-resp-${d.id}" style="margin-left:46px;"><img src=""><button class="btn-quitar-adjunto" data-action="quitar-adj" data-id="${d.id}">X</button></div></div></div>`;
     })){DOM.lista.innerHTML='';}
     const btnC=document.getElementById('btnCargarMasContainer');
     if(appState.limite<appState.coms.length){btnC.style.display='block';btnC.innerHTML=`<button class="btn-cargar-mas" data-action="more">${T.m}</button>`;}
