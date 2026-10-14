@@ -1,14 +1,30 @@
 (async function(){
   const widgetBox=document.getElementById('mb-comentarios-widget');
   if(!widgetBox)return;
-    // ===== EMOTES: edita esta lista para agregar los tuyos =====
-  // Formato:  nombre:'URL de la imagen'   (o un emoji como texto)
-  // En el comentario se escriben como :nombre:  (nombre en minusculas; letras, numeros o _ ; maximo 24)
+
+  // ===== EMOTES: edita esta lista para agregar los tuyos =====
+  // Cada emote es   nombre:'URL de la imagen'   (PNG, GIF, WebP o SVG; mejor cuadrada y de ~64x64 px).
+  //   Ejemplos:   creeper:'/uploads/1/2/7/3/127300461/creeper.png',   zombi:'https://tusitio.com/zombi.gif',
+  // En el comentario se escriben como :nombre:  (nombre en minusculas; letras, numeros o _ ; maximo 24 caracteres; hasta 256 emotes).
+  // Los 5 de abajo son de PRUEBA (dibujos SVG metidos en el propio codigo): borralos y pon los tuyos.
+  const svg=s=>'data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">'+s+'</svg>');
   const EMOTES={
-    fuego:'\uD83D\uDD25',
-    corazon:'\u2764\uFE0F',
-    // creeper:'/uploads/1/2/7/3/127300461/creeper.png',   // ejemplo con imagen: quita las // y pon tu URL
+    corazon:svg('<path d="M32 58C10 42 3 30 3 21 3 12 10 5 19 5c6 0 11 3 13 8 2-5 7-8 13-8 9 0 16 7 16 16 0 9-7 21-29 37z" fill="#e53935"/><path d="M14 16c3-4 8-5 11-2" stroke="#ff8a80" stroke-width="4" stroke-linecap="round" fill="none"/>'),
+    estrella:svg('<path d="M32 3l8.6 18.4 20.2 2.4-14.9 13.9 3.9 20L32 47.8 14.2 57.7l3.9-20L3.2 23.8l20.2-2.4z" fill="#ffc107" stroke="#f9a825" stroke-width="3" stroke-linejoin="round"/>'),
+    fuego:svg('<path d="M32 3c3 14 18 20 18 37 0 12-8 21-18 21S14 52 14 41c0-8 5-12 8-18 1 6 4 9 7 9-1-10-1-20 3-29z" fill="#ff7043"/><path d="M32 61c-7 0-12-5-12-12 0-8 7-10 9-18 6 5 14 11 14 18 0 7-5 12-11 12z" fill="#ffd54f"/>'),
+    risa:svg('<circle cx="32" cy="32" r="29" fill="#ffca28" stroke="#f9a825" stroke-width="3"/><path d="M15 26q6-9 12 0M37 26q6-9 12 0" stroke="#5d4037" stroke-width="4" stroke-linecap="round" fill="none"/><path d="M14 38h36c0 11-8 18-18 18S14 49 14 38z" fill="#5d4037"/><path d="M23 52q9-8 18 0-9 6-18 0z" fill="#ef5350"/>'),
+    gema:svg('<path d="M32 4l24 22-24 34L8 26z" fill="#26c6da"/><path d="M32 4l24 22H8z" fill="#80deea"/><path d="M32 26l24 0-24 34zM32 26L8 26l24 34z" fill="#00acc1" opacity=".55"/><path d="M11 26h42M20 15l12 11 12-11" stroke="#e0f7fa" stroke-width="2" fill="none" stroke-linejoin="round"/>'),
   };
+  // --- No hace falta tocar nada de aqui para abajo ---
+  const esImg=v=>/^(https?:)?\/|^data:image\//.test(v);
+  const EMO_KEYS=Object.keys(EMOTES).filter(n=>/^[a-z0-9_]{1,24}$/.test(n)&&esImg(EMOTES[n])).slice(0,256);
+  const EMO_IDX=Object.create(null);EMO_KEYS.forEach((n,i)=>{EMO_IDX[n]=i;});
+  // En la caja de escribir cada emote es 1 caracter "reservado" (U+E000+n) que se dibuja como su imagen; al publicar vuelve a ser :nombre:
+  const EMO_CSS=EMO_KEYS.map((n,i)=>'#caja-comentarios .em[data-e="'+i+'"]{background-image:url("'+EMOTES[n].replace(/["\\\n\r]/g,c=>'\\'+c.charCodeAt(0).toString(16)+' ')+'")}').join('\n');
+
+  // ===== CODIGOS DE ENLACE: pon aqui tu uid de admin (el mismo que usas en las reglas de Firebase) =====
+  // Al abrir una pagina con tu sesion de Google, se numeran solos los comentarios que aun no tengan codigo.
+  const ADMIN_UID='9wvlf1TIdsMlVw7ACtRqWyAUddE3';
   const loadScript=(src)=>new Promise(r=>{const s=document.createElement('script');s.src=src;s.onload=r;document.head.appendChild(s);});
   if(typeof firebase==='undefined'){
     await loadScript("https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js");
@@ -53,14 +69,34 @@
 .spoiler{background:#000;color:transparent;border-radius:3px;cursor:pointer;padding:0 2px;}
 .spoiler:not(.visto) *{visibility:hidden;}
 .spoiler.visto{background:rgba(255,255,255,.12);color:inherit;}
-.vista-previa{display:none;background:rgba(0,0,0,.25);border:1px dashed var(--c-border);border-radius:6px;padding:8px 10px;margin-top:6px;}
-.vp-titulo{font-size:11px;color:var(--text-muted);margin-bottom:4px;}
+.grupo-titulo{position:relative;display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.grupo-titulo .orden-wrap{position:static;}
+@font-face{font-family:'MBEmo';src:url(data:font/woff;base64,d09GRgABAAAAAAI0AAoAAAAABFgAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAABPUy8yAAABXAAAADAAAABgJXY5DWNtYXAAAAGUAAAAMAAAAjTgj+PSZ2x5ZgAAAcwAAAABAAAAAQAAAABoZWFkAAAA9AAAADYAAAA2LQF93GhoZWEAAAEsAAAAGwAAACQDhgVIaG10eAAAAYwAAAAGAAAABgZAAABsb2NhAAABxAAAAAYAAAAGAAAAAG1heHAAAAFIAAAAEwAAACAAAwACbmFtZQAAAdAAAABPAAAAWg7yPH5wb3N0AAACIAAAABQAAAAqbnUDZQABAAAAAQAAMSjTWF8PPPUAAwPoAAAAAOb1nn4AAAAA5vWefgAAAAAAAAAAAAAAAwACAAAAAAAAeJxjYGRgYG75z8bAwObAAAGMDKiAEQA2IQHWAHicY2BkYGBgYoABBAsKAACXAAYAeJxjYGZzYJzAwMrAwkAEEEBi2wMBA8MDhgf/mVv+szEwMLcw/EJTrsDAAAASlgfcBkAAAAAAAAB4nGNgYGBiYGBgBmIRIMkIplmYFIA0CxAC+Q/+//8PJBlAJJDPAiZH4QiGAKybCCEAAAAAAAAAAAAAAAB4nC2IQQqAIBQF55sRRbTsKB1AcOnGG7gQN4ogeP80msVj3gCaB2EirN9OFNt4C6L3UQ7O3xUXtzO2VB9Tz6HhMFgKFU8k0ckE2gvj9wm0AHicY2BiwA+A8oxMzKm5+QADIgFM) format('woff');unicode-range:U+E000-E0FF;}
+#caja-comentarios .input-backdrop,#caja-comentarios .input-backdrop *,#caja-comentarios .textarea-transparente{font-family:'MBEmo',var(--font-stack)!important;}
+.input-backdrop .em{background-repeat:no-repeat;background-position:center;background-size:contain;padding:.25em 0;}
+${EMO_CSS}
+.input-backdrop .mk{color:rgba(255,255,255,.4);}
+.input-backdrop .f-b{-webkit-text-stroke:.6px currentColor;}
+.input-backdrop .f-i{color:#cfe3ff;}
+#mb-comentarios-widget.italic-ok .input-backdrop .f-i{font-style:italic;color:inherit;}
+.input-backdrop .f-u{text-decoration:underline;}
+.input-backdrop .f-s{text-decoration:line-through;}
+.input-backdrop .f-code{background:rgba(255,255,255,.16);border-radius:3px;color:#ffd9a0;}
+.input-backdrop .f-sp{background:rgba(255,255,255,.2);border-radius:3px;}
+.input-backdrop .f-q{color:#c9d1d9;}
+.input-backdrop .f-url{color:var(--accent-blue);}
+.comentario-texto .cita{display:block;border-left:3px solid rgba(255,255,255,.35);padding-left:10px;margin:2px 0;color:#d0d7de;}
+.barra-fmt{position:absolute;z-index:2147483647;display:none;align-items:center;gap:2px;padding:4px;background:#00163e;border:1px solid var(--c-border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.6);font-family:var(--font-stack);}
+.barra-fmt button{background:transparent;border:none;color:#fff;width:30px;height:28px;border-radius:5px;cursor:pointer;font-size:15px;line-height:1;display:flex;align-items:center;justify-content:center;padding:0;font-family:inherit;}
+.barra-fmt button:hover{background:rgba(255,255,255,.16);}
+.barra-fmt svg{width:18px;height:18px;fill:currentColor;}
+.fmt-sep{width:1px;height:18px;background:var(--c-border);margin:0 4px;}
 #caja-comentarios a.comentario-fecha{color:gray;text-decoration:none;cursor:pointer;}
 #caja-comentarios a.comentario-fecha:hover{text-decoration:underline;}
 </style>
 <div id="caja-comentarios">
   <div class="cabecera-principal">
-    <h3 class="titulo-comentarios" id="txtTitulo">Cargando...</h3>
+    <div class="grupo-titulo"><h3 class="titulo-comentarios" id="txtTitulo">Cargando...</h3><div class="orden-wrap"><button type="button" class="btn-orden-menu" id="btnOrdenMenu" aria-haspopup="true" aria-expanded="false"><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" aria-hidden="true"><path d="M3 18h6v-2H3v2zM3 6v2h18V6H3zm0 7h12v-2H3v2z"/></svg><span id="txtOrdenar"></span></button><div class="orden-menu" id="ordenMenu" style="display:none;" role="menu"></div></div></div>
     <div id="auth-container"><button id="btnGoogle"></button><div id="infoUsuario" style="display:none;"><span id="textoUsuario"></span><button id="btnSalir"></button></div></div>
   </div>
   <div class="formulario-comentarios">
@@ -80,7 +116,6 @@
     <div class="controles-formulario"><button class="btn-attach btn-emote" data-action="emote" data-target="main" title="Emotes">&#x1F600;</button><button class="btn-attach" id="btnImgMain" title="Adjuntar Imagen">&#x1F5BC;&#xFE0F;</button><button id="btnEnviar" class="btn-send-whatsapp"><svg viewBox="0 0 24 24" width="22" height="22" fill="white"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button></div>
   </div>
   <div id="msgExito" style="display:none;background:#f0ffdb;color:#2b5e0c;border:1px solid #cddc39;padding:10px;border-radius:6px;margin-bottom:15px;text-align:center;font-weight:bold;font-size:14px;"></div>
-  <div class="barra-orden" id="barraOrden"><div class="orden-wrap"><button type="button" class="btn-orden-menu" id="btnOrdenMenu" aria-haspopup="true" aria-expanded="false"><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" aria-hidden="true"><path d="M3 18h6v-2H3v2zM3 6v2h18V6H3zm0 7h12v-2H3v2z"/></svg><span id="txtOrdenar"></span></button><div class="orden-menu" id="ordenMenu" style="display:none;" role="menu"></div></div></div>
   <div id="listaComentarios">
     <div class="comentario-individual" style="opacity:0.8; padding-top: 15px !important;"><div class="avatar skeleton-avatar"></div><div class="comentario-contenido"><div class="skeleton-line skeleton-title"></div><div class="skeleton-line"></div><div class="skeleton-line short"></div></div></div>
   </div>
@@ -100,7 +135,7 @@
   const localeDict={en:{t:"comments",t1:"comment",g:"Sign in with Google",o:"Sign out",l:"Signed in with Google",u:"Username",c:"Write a comment...",r:"Write a reply...",b:"Reply",m:"Load more comments...",a:"ago",j:"Just now",p:"Pinned",s:"Comment sent!",y:"Year",mo:"Month",d:"Day",h:"Hour",mi:"Minute",ord:"Sort by",rec:"Newest",pop:"Top",lnk:"Link",cpl:"Copy link",cpd:"Link copied!"},pt:{t:"coment\u00E1rios",t1:"coment\u00E1rio",g:"Entrar com o Google",o:"Sair",l:"Conectado com o Google",u:"Nome de usu\u00E1rio",c:"Escreva um coment\u00E1rio...",r:"Escreva uma resposta...",b:"Responder",m:"Carregar mais coment\u00E1rios...",a:"atr\u00E1s",j:"Agora mesmo",p:"Fixado",s:"Coment\u00E1rio enviado!",y:"Ano",mo:"M\u00EAs",d:"Dia",h:"Hora",mi:"Minuto",ord:"Ordenar por",rec:"Mais recentes",pop:"Mais populares",lnk:"Link",cpl:"Copiar link",cpd:"Link copiado!"},es:{t:"comentarios",t1:"comentario",g:"Iniciar sesi\u00F3n con Google",o:"Cerrar sesi\u00F3n",l:"Conectado con Google",u:"Usuario",c:"Escribe un comentario...",r:"Escribe una respuesta...",b:"Responder",m:"Cargar m\u00E1s comentarios...",a:"hace",j:"Justo ahora",p:"Fijado",s:"Comentario enviado!",y:"A\u00F1o",mo:"Mes",d:"D\u00EDa",h:"Hora",mi:"Minuto",ord:"Ordenar por",rec:"M\u00E1s recientes",pop:"M\u00E1s populares",lnk:"Enlace",cpl:"Copiar enlace",cpd:"\u00A1Enlace copiado!"}};
   const nL=navigator.language.substring(0,2);const L=localeDict[nL]?nL:'es';const T=localeDict[L];
   document.getElementById('btnGoogle').textContent=T.g;document.getElementById('btnSalir').textContent=T.o;DOM.nom.placeholder=T.u;document.getElementById('backdrop-main').innerHTML=`<span class="backdrop-placeholder">${T.c}</span>`;DOM.nom.value=localStorage.getItem('savedName')||'';appState.pfpL=localStorage.getItem('savedAvatar');DOM.avaAct.src=appState.pfpL||"/uploads/1/2/7/3/127300461/default-pfp_596.png";DOM.nom.oninput=e=>localStorage.setItem('savedName',e.target.value);
-    Object.assign(localeDict.en,{ant:"Oldest",popD:"Comments with the most likes first",antD:"Oldest comments first",recD:"Newest comments first",vp:"Preview"});
+  Object.assign(localeDict.en,{ant:"Oldest",popD:"Comments with the most likes first",antD:"Oldest comments first",recD:"Newest comments first",vp:"Preview"});
   Object.assign(localeDict.pt,{ant:"Mais antigos",popD:"Coment\u00E1rios com mais curtidas primeiro",antD:"Coment\u00E1rios mais antigos primeiro",recD:"Coment\u00E1rios mais recentes primeiro",vp:"Pr\u00E9-visualiza\u00E7\u00E3o"});
   Object.assign(localeDict.es,{ant:"M\u00E1s antiguos",popD:"Los comentarios con m\u00E1s likes primero",antD:"Los comentarios m\u00E1s viejos primero",recD:"Los comentarios m\u00E1s nuevos primero",vp:"Vista previa"});
   document.getElementById('txtOrdenar').textContent=T.ord;
@@ -110,7 +145,7 @@
   // El ranking de likes se "congela" al elegir el orden, para que los comentarios no salten al dar like.
   // Volver a pulsar el bot\u00F3n activo refresca el ranking.
   const rankLikes=c=>{if(appState.rank[c.id]===undefined)appState.rank[c.id]=c.likes||0;return appState.rank[c.id];};
-    const cmpComs=(x,y)=>{
+  const cmpComs=(x,y)=>{
     if(x.anclado&&!y.anclado)return -1;
     if(!x.anclado&&y.anclado)return 1;
     if(appState.orden==='populares'){const dl=rankLikes(y)-rankLikes(x);if(dl)return dl;}
@@ -126,12 +161,13 @@
     if(!e.target.closest('.emote-picker')&&!e.target.closest('.btn-emote'))cerrarEmotes();
   });
   document.addEventListener('keydown',e=>{if(e.key==='Escape'){cerrarMenuOrden();cerrarEmotes();}});
-  
+
   /* ===== ENLACE PERMANENTE (#com_ID / #resp_ID) ===== */
   const permaUrl=frag=>location.origin+location.pathname+location.search+'#'+frag;
-    const parseHash=()=>{try{const m=location.hash.match(/^#(?:c-|com_|resp_)(.+)$/);return m?{cod:decodeURIComponent(m[1])}:null;}catch(e){return null;}};
+  const parseHash=()=>{try{const m=location.hash.match(/^#(?:c-|com_|resp_)(.+)$/);return m?{cod:decodeURIComponent(m[1])}:null;}catch(e){return null;}};
   let hashObj=parseHash();
-    /* ===== CODIGOS DE ENLACE (#c-xK7p2): 3 numeros + 1 minuscula + 1 mayuscula, sin caracteres confusos ===== */
+
+  /* ===== CODIGOS DE ENLACE (#c-xK7p2): 3 numeros + 1 minuscula + 1 mayuscula, sin caracteres confusos ===== */
   const CODE_DIG='23456789',CODE_MIN='abcdefghijkmnpqrstuvwxyz',CODE_MAY='ABCDEFGHJKLMNPQRSTUVWXYZ';
   function codigosUsados(){
     const s=new Set();
@@ -174,7 +210,7 @@
     if(!hashObj||!appState.coms.length)return;
     const miNom=appState.usr?appState.usr.displayName:(DOM.nom.value.trim()||"Invitado");
     const oculto=x=>x.aprobado===false||(x.shadowbanned&&x.nombre!==miNom);
-        let padre=null,respId=null;
+    let padre=null,respId=null;
     for(const c of appState.coms){
       if(c.num===hashObj.cod||c.id===hashObj.cod){padre=c;break;}
       if(c.respuestas){const k=Object.keys(c.respuestas).find(k=>{const r=c.respuestas[k];return r&&(r.num===hashObj.cod||k===hashObj.cod);});if(k){padre=c;respId=k;break;}}
@@ -230,14 +266,13 @@
     procesarImagen(f,ta.dataset.target);
   });
   function updateBackdrop(ta){
-    const tg=ta.dataset.target;const bd=document.getElementById('backdrop-'+tg);if(!bd)return;vistaPrevia(ta);
-    let v=ta.value;if(!v){bd.innerHTML=`<span class="backdrop-placeholder">${tg==='main'?T.c:T.r}</span>`;return;}
-    let safe=v.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    uniqueUsers.forEach(u=>{const eN=u.nombre.replace(/[-\/\\^$*+?.()|[\]{}]/g,'\\$&');const reg=new RegExp(`(^|\\s)@${eN}(?=\\s|$)`,'g');safe=safe.replace(reg,`$1<span class="mention-text">@${u.nombre}</span>`);});
-    if(safe.endsWith('\n'))safe+='<br>';
-    bd.innerHTML=safe;
+    const tg=ta.dataset.target;const bd=document.getElementById('backdrop-'+tg);if(!bd)return;
+    const v=ta.value;if(!v){bd.innerHTML=`<span class="backdrop-placeholder">${tg==='main'?T.c:T.r}</span>`;return;}
+    let h=procT(v,true);if(h.endsWith('\n'))h+='<br>';
+    bd.innerHTML=h;
   }
   function publicarMsj(t,pId=null,rInput=null){
+    t=aTokens(t);
     const cd=localStorage.getItem('floodT');if(cd&&(Date.now()-cd)<30000){alert(`\u23F3 Spam.`);return;}
     let n=appState.usr?appState.usr.displayName:(DOM.nom.value.trim()||"Invitado");
     const imgData=pId?appState.imgAdjResp[pId]:appState.imgAdjMain;
@@ -310,7 +345,7 @@
   });
   document.addEventListener('input',e=>{
     if(e.target.tagName==='TEXTAREA'&&(e.target.id==='textoComentario'||e.target.classList.contains('input-respuesta'))){
-        e.target.style.height='auto';e.target.style.height=(e.target.scrollHeight)+'px';updateBackdrop(e.target);
+        autoEmotes(e);e.target.style.height='auto';e.target.style.height=(e.target.scrollHeight)+'px';updateBackdrop(e.target);
         activeTextarea=e.target;const val=activeTextarea.value;const cursor=activeTextarea.selectionStart;
         const textBeforeCursor=val.substring(0,cursor);const match=textBeforeCursor.match(/(?:^|\s)@([^@\n]*)$/);
         if(match&&match[1].length<30){
@@ -363,7 +398,7 @@ mBox.scrollTop=0;mentionIdx=0;marcarMencion(false);
     }else if(btn.classList.contains('btn-enlace')){
       const url=permaUrl('c-'+btn.dataset.cod);
       copiarTexto(url).then(ok=>{if(!ok)return;const o=btn.innerHTML;btn.innerHTML='&#x2705; '+T.cpd;setTimeout(()=>{if(btn.isConnected)btn.innerHTML=o;},1800);});
-        }else if(btn.id==='btnOrdenMenu'){
+    }else if(btn.id==='btnOrdenMenu'){
       toggleMenuOrden();
     }else if(btn.classList.contains('orden-opcion')){
       appState.orden=btn.dataset.orden;appState.rank={};appState.limite=10;syncOrden();cerrarMenuOrden();render();
@@ -381,15 +416,24 @@ mBox.scrollTop=0;mentionIdx=0;marcarMencion(false);
       else{allR.forEach(el=>{el.style.display='none';el.classList.remove('anim-resp');});btn.dataset.state='none';btn.innerHTML=`&#x21B3; Ver ${tot} respuesta${tot>1?'s':''}`;}
     }
   });
-    /* ===== EMOTES + FORMATO LIGERO ===== */
+  /* ===== EMOTES + FORMATO EN VIVO (estilo Discord) ===== */
+  const esCaja=el=>!!el&&el.tagName==='TEXTAREA'&&(el.id==='textoComentario'||el.classList.contains('input-respuesta'));
   function hasEmote(n){return Object.prototype.hasOwnProperty.call(EMOTES,n);}
-  function emoteHTML(n){const v=EMOTES[n];return /^(https?:)?\/|^data:image\//.test(v)?`<img class="emote" src="${v}" alt=":${n}:" title=":${n}:" loading="lazy" decoding="async">`:`<span class="emote-txt" title=":${n}:">${v}</span>`;}
-  function insertarEnTextarea(ta,txt){
-    const s=ta.selectionStart,e=ta.selectionEnd,v=ta.value;
-    ta.value=v.slice(0,s)+txt+v.slice(e);
-    const p=s+txt.length;ta.focus();ta.setSelectionRange(p,p);
-    ta.style.height='auto';ta.style.height=ta.scrollHeight+'px';updateBackdrop(ta);
+  function emoteHTML(n){const v=EMOTES[n];return esImg(v)?`<img class="emote" src="${v}" alt=":${n}:" title=":${n}:" loading="lazy" decoding="async">`:`<span class="emote-txt" title=":${n}:">${v}</span>`;}
+  const EMO_CHR=n=>String.fromCharCode(0xE000+EMO_IDX[n]);
+  try{if(document.fonts&&document.fonts.load)document.fonts.load('14px MBEmo','\uE000').catch(()=>{});}catch(err){}   // precarga la fuente que da su ancho a los emotes
+  // :nombre: <-> caracter reservado (el comentario se guarda siempre con :nombre:)
+  function aTokens(s){return s.replace(/[-]/g,c=>{const n=EMO_KEYS[c.charCodeAt(0)-0xE000];return n?':'+n+':':'';});}
+  function convertirEmotes(s){return EMO_KEYS.length?s.replace(/:([a-zA-Z0-9_]{1,24}):/g,(m,n)=>{n=n.toLowerCase();return EMO_IDX[n]!==undefined?EMO_CHR(n):m;}):s;}
+  // Reemplaza un trozo del textarea conservando el historial de deshacer (Ctrl+Z)
+  function reemplazar(ta,ini,fin,txt){
+    ta.focus();ta.setSelectionRange(ini,fin);
+    const esperado=ta.value.slice(0,ini)+txt+ta.value.slice(fin);
+    let ok=false;try{ok=document.execCommand('insertText',false,txt);}catch(err){}
+    if(!ok||ta.value!==esperado){ta.value=esperado;ta.dispatchEvent(new Event('input',{bubbles:true}));}
+    const p=ini+txt.length;ta.setSelectionRange(p,p);
   }
+  function insertarEnTextarea(ta,txt){reemplazar(ta,ta.selectionStart,ta.selectionEnd,txt);}
   let emoteBox=null,emoteTA=null,emoteKey='';
   function cerrarEmotes(){if(emoteBox)emoteBox.style.display='none';}
   function abrirEmotes(btn){
@@ -397,7 +441,7 @@ mBox.scrollTop=0;mentionIdx=0;marcarMencion(false);
     if(emoteBox&&emoteBox.style.display==='grid'&&emoteKey===key){cerrarEmotes();return;}
     if(!emoteBox){
       emoteBox=document.createElement('div');emoteBox.className='emote-picker';document.body.appendChild(emoteBox);
-      emoteBox.addEventListener('click',e=>{const it=e.target.closest('.emote-item');if(it&&emoteTA){insertarEnTextarea(emoteTA,':'+it.dataset.n+': ');cerrarEmotes();}});
+      emoteBox.addEventListener('click',e=>{const it=e.target.closest('.emote-item');if(it&&emoteTA){const n=it.dataset.n;insertarEnTextarea(emoteTA,(EMO_IDX[n]!==undefined?EMO_CHR(n):':'+n+':')+' ');cerrarEmotes();}});
     }
     const ks=Object.keys(EMOTES);
     emoteBox.innerHTML=ks.length?ks.map(n=>`<button type="button" class="emote-item" data-n="${n}" title=":${n}:">${emoteHTML(n)}</button>`).join(''):'<span style="grid-column:1/-1;color:#8b949e;font-size:13px;">Sin emotes</span>';
@@ -407,34 +451,150 @@ mBox.scrollTop=0;mentionIdx=0;marcarMencion(false);
     emoteBox.style.top=(abajo?r.bottom+window.scrollY+6:r.top+window.scrollY-h-6)+'px';
     emoteBox.style.left=Math.max(8,Math.min(r.right+window.scrollX-280,window.scrollX+document.documentElement.clientWidth-288))+'px';
   }
-  // Vista previa en vivo: muestra como quedara el comentario (formato + emotes) mientras escribes
-  function vistaPrevia(ta){
-    const cont=ta.closest('.input-contenedor');if(!cont)return;
-    const anchor=cont.parentElement.classList.contains('formulario-respuesta')?cont.parentElement:cont;
-    let pv=anchor.nextElementSibling;
-    if(!pv||!pv.classList.contains('vista-previa')){pv=document.createElement('div');pv.className='vista-previa';anchor.insertAdjacentElement('afterend',pv);}
-    const v=ta.value;let html='';
-    if(/[*_~`|:]/.test(v)){const h=procT(v);if(/<(strong|em|del|code)>|class="(spoiler|emote)/.test(h))html=h;}
-    if(!html){pv.style.display='none';return;}
-    pv.innerHTML='<div class="vp-titulo">'+T.vp+'</div><p class="comentario-texto">'+html+'</p>';pv.style.display='block';
+  // Si escribes :nombre: (o pegas texto con :nombre:) se convierte solo en el emote
+  let convirtiendo=false;
+  function autoEmotes(e){
+    const ta=e.target;
+    if(convirtiendo||e.isComposing||!EMO_KEYS.length||ta.value.indexOf(':')<0)return;
+    const it=e.inputType||'';
+    if(it==='insertFromPaste'||it==='insertFromDrop'||it==='insertReplacementText'){
+      const v=ta.value,n=convertirEmotes(v);
+      if(n!==v){const p=ta.selectionStart;ta.value=n;const q=convertirEmotes(v.slice(0,p)).length;ta.setSelectionRange(q,q);}
+    }else if(!/^(delete|history)/.test(it)&&ta.value.charAt(ta.selectionStart-1)===':'){   // (al deshacer/borrar no se vuelve a convertir)
+      const p=ta.selectionStart,m=ta.value.slice(Math.max(0,p-26),p).match(/:([a-zA-Z0-9_]{1,24}):$/);
+      if(m&&EMO_IDX[m[1].toLowerCase()]!==undefined){convirtiendo=true;try{reemplazar(ta,p-m[0].length,p,EMO_CHR(m[1].toLowerCase()));}finally{convirtiendo=false;}}
+    }
   }
-  // Formato:  **negrita**  *cursiva* o _cursiva_  ~~tachado~~  `codigo`  ||spoiler||   y emotes :nombre:
-  function procT(t){
+  // Al copiar o cortar, los emotes salen como :nombre: (no como el caracter reservado)
+  function copiarCaja(e){
+    const ta=e.target;if(!esCaja(ta)||!e.clipboardData)return;
+    const sel=ta.value.slice(ta.selectionStart,ta.selectionEnd);
+    if(!/[-]/.test(sel))return;
+    e.clipboardData.setData('text/plain',aTokens(sel));e.preventDefault();
+    if(e.type==='cut'){try{document.execCommand('delete');}catch(err){}}
+  }
+  document.addEventListener('copy',copiarCaja);document.addEventListener('cut',copiarCaja);
+
+  // Formato:  **negrita**  *cursiva* o _cursiva_  __subrayado__  ~~tachado~~  `codigo`  ||spoiler||  > cita  y emotes :nombre:
+  //   procT(texto)       -> HTML del comentario publicado
+  //   procT(texto,true)  -> HTML de la caja de escribir: el texto queda IDENTICO (los marcadores solo se ven mas oscuros) y cambia unicamente el estilo
+  function procT(t,live){
     let safe=t.replace(/[\u0001\u0002]/g,'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     const guard=[],keep=h=>'\u0001'+(guard.push(h)-1)+'\u0002';
-    safe=safe.replace(/`([^`\n]+)`/g,(m,c)=>keep('<code>'+c+'</code>'));
-    safe=safe.replace(/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/g,(m,id)=>keep('<div style="margin:10px 0; max-width:378px;"><div style="border-radius:8px;overflow:hidden;position:relative;padding-bottom:56.25%;"><iframe src="https://www.youtube.com/embed/'+id+'" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;" allowfullscreen></iframe></div></div>'));
-    safe=safe.replace(/(https?:\/\/[^\s<"'\u0001\u0002]+)/g,url=>keep('<a href="'+url+'" target="_blank">'+url+'</a>'));
+    const mk=s=>'<span class="mk">'+s+'</span>';
+    const W=(m,c,tag,cls)=>live?keep(mk(m)+'<span class="'+cls+'">')+c+keep('</span>'+mk(m)):keep('<'+tag+'>')+c+keep('</'+tag.split(' ')[0]+'>');
+    safe=safe.split('\n').map((ln,i,a)=>{
+      const q=ln.match(/^&gt; (.*)$/),fin=i<a.length-1?'\n':'';
+      if(!q)return ln+fin;
+      return live?keep(mk('&gt; ')+'<span class="f-q">')+q[1]+keep('</span>')+fin:keep('<span class="cita">')+q[1]+keep('</span>');
+    }).join('');
+    safe=safe.replace(/`([^`\n\u0001\u0002]+)`/g,(m,c)=>keep(live?mk('`')+'<span class="f-code">'+c+'</span>'+mk('`'):'<code>'+c+'</code>'));
+    if(!live)safe=safe.replace(/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/g,(m,id)=>keep('<div style="margin:10px 0; max-width:378px;"><div style="border-radius:8px;overflow:hidden;position:relative;padding-bottom:56.25%;"><iframe src="https://www.youtube.com/embed/'+id+'" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;" allowfullscreen></iframe></div></div>'));
+    safe=safe.replace(/(https?:\/\/[^\s<"'\u0001\u0002]+)/g,url=>keep(live?'<span class="f-url">'+url+'</span>':'<a href="'+url+'" target="_blank">'+url+'</a>'));
     uniqueUsers.forEach(u=>{const eN=u.nombre.replace(/[-\/\\^$*+?.()|[\]{}]/g,'\\$&');const reg=new RegExp(`(^|\\s)@${eN}(?=\\s|$)`,'g');safe=safe.replace(reg,(m,pre)=>pre+keep(`<span class="mention-text">@${u.nombre}</span>`));});
-    safe=safe.replace(/:([a-zA-Z0-9_]{1,24}):/g,(m,n)=>hasEmote(n.toLowerCase())?keep(emoteHTML(n.toLowerCase())):m);
+    if(live)safe=safe.replace(/[-]/g,c=>{const i=c.charCodeAt(0)-0xE000;return EMO_KEYS[i]?keep('<span class="em" data-e="'+i+'">'+c+'</span>'):c;});
+    else safe=safe.replace(/:([a-zA-Z0-9_]{1,24}):/g,(m,n)=>hasEmote(n.toLowerCase())?keep(emoteHTML(n.toLowerCase())):m);
     safe=safe
-      .replace(/\*\*([^\s*](?:.*?[^\s*])?)\*\*/g,'<strong>$1</strong>')
-      .replace(/(^|[\s(>|~])\*(\S(?:.*?\S)?)\*(?=[\s.,;:!?)<|~]|$)/g,'$1<em>$2</em>')
-      .replace(/(^|[\s(>|~])_(\S(?:.*?\S)?)_(?=[\s.,;:!?)<|~]|$)/g,'$1<em>$2</em>')
-      .replace(/~~(\S(?:.*?\S)?)~~/g,'<del>$1</del>')
-      .replace(/\|\|(\S(?:.*?\S)?)\|\|/g,'<span class="spoiler">$1</span>');
+      .replace(/\*\*([^\s*](?:.*?[^\s*])?)\*\*/g,(m,c)=>W('**',c,'strong','f-b'))
+      .replace(/(^|[\s(\u0002|~*])__(\S(?:.*?\S)?)__(?=[\s.,;:!?)\u0001|~*]|$)/g,(m,p,c)=>p+W('__',c,'u','f-u'))
+      .replace(/(^|[\s(\u0002|~])\*(\S(?:.*?\S)?)\*(?=[\s.,;:!?)\u0001|~]|$)/g,(m,p,c)=>p+W('*',c,'em','f-i'))
+      .replace(/(^|[\s(\u0002|~])_(\S(?:.*?\S)?)_(?=[\s.,;:!?)\u0001|~]|$)/g,(m,p,c)=>p+W('_',c,'em','f-i'))
+      .replace(/~~(\S(?:.*?\S)?)~~/g,(m,c)=>W('~~',c,'del','f-s'))
+      .replace(/\|\|(\S(?:.*?\S)?)\|\|/g,(m,c)=>W('||',c,'span class="spoiler"','f-sp'));
     return safe.replace(/\u0001(\d+)\u0002/g,(m,i)=>guard[i]);
   }
+
+  // La cursiva real solo se usa si en este navegador no cambia el ancho de las letras (si cambia, el cursor se desalinea): si no, la cursiva se ve como un color
+  try{
+    const bd=document.getElementById('backdrop-main'),sp=document.createElement('span');
+    sp.style.cssText='position:absolute;visibility:hidden;white-space:nowrap;';sp.textContent='abcdefghijklmn\u00F1opqrstuvwxyz \u00E1\u00E9\u00ED\u00F3\u00FA ABCDEFGHIJKLMN\u00D1OPQRSTUVWXYZ 0123456789 .,;:!?()';bd.appendChild(sp);
+    const a=sp.getBoundingClientRect().width;sp.style.fontStyle='italic';const b=sp.getBoundingClientRect().width;sp.remove();
+    if(a&&Math.abs(a-b)/a<0.0005)widgetBox.classList.add('italic-ok');
+  }catch(err){}
+
+  /* --- Botones de formato: aplicar / quitar marcadores sobre la seleccion --- */
+  const FMT={b:'**',i:'*',u:'__',s:'~~',c:'`',e:'||'};
+  const runIzq=(s,ch)=>{let n=0;while(n<s.length&&s[n]===ch)n++;return n;};
+  const runDer=(s,ch)=>{let n=0;while(n<s.length&&s[s.length-1-n]===ch)n++;return n;};
+  const yaTiene=(k,l,r)=>k==='i'?(l%2===1&&r%2===1):(l>=FMT[k].length&&r>=FMT[k].length);
+  function aplicarFmt(ta,k){
+    if(!esCaja(ta))return;
+    const v=ta.value,a=ta.selectionStart,b=ta.selectionEnd;
+    if(k==='q')return alternarCita(ta,v,a,b);
+    const m=FMT[k],ch=m[0],n=m.length,sel=v.slice(a,b);
+    if(a===b){reemplazar(ta,a,a,m+m);ta.setSelectionRange(a+n,a+n);progBarra();return;}
+    let ini=a,fin=b,nuevo,s0,s1;
+    if(sel.length>=2*n&&yaTiene(k,runIzq(sel,ch),runDer(sel,ch))){          // la seleccion ya incluye los marcadores: quitarlos
+      nuevo=sel.slice(n,sel.length-n);s0=ini;s1=ini+nuevo.length;
+    }else if(yaTiene(k,runDer(v.slice(0,a),ch),runIzq(v.slice(b),ch))){     // los marcadores estan justo afuera: quitarlos
+      ini=a-n;fin=b+n;nuevo=sel;s0=ini;s1=ini+nuevo.length;
+    }else{                                                                  // ponerlos (los espacios de los bordes quedan fuera)
+      const m1=sel.match(/^\s*/)[0].length,m2=sel.match(/\s*$/)[0].length,core=sel.slice(m1,sel.length-m2);
+      if(!core)return;
+      nuevo=sel.slice(0,m1)+m+core+m+sel.slice(sel.length-m2);s0=ini+m1+n;s1=s0+core.length;
+    }
+    reemplazar(ta,ini,fin,nuevo);ta.setSelectionRange(s0,s1);progBarra();
+  }
+  function alternarCita(ta,v,a,b){
+    if(b>a&&v[b-1]==='\n')b--;
+    const ls=a===0?0:v.lastIndexOf('\n',a-1)+1;
+    let le=v.indexOf('\n',b);if(le<0)le=v.length;
+    const lineas=v.slice(ls,le).split('\n'),todas=lineas.every(l=>l.startsWith('> '));
+    const nuevo=lineas.map(l=>todas?l.slice(2):'> '+l).join('\n');
+    reemplazar(ta,ls,le,nuevo);ta.setSelectionRange(ls,ls+nuevo.length);progBarra();
+  }
+  document.addEventListener('keydown',e=>{
+    if(!esCaja(e.target)||e.isComposing||!(e.ctrlKey||e.metaKey)||e.altKey||e.shiftKey)return;
+    const k=(e.key||'').toLowerCase();
+    if(k==='b'||k==='i'||k==='u'){e.preventDefault();aplicarFmt(e.target,k);}
+  });
+
+  /* --- Barra flotante al seleccionar texto (como Discord) --- */
+  const TT=L==='en'?{b:'Bold (Ctrl+B)',i:'Italic (Ctrl+I)',u:'Underline (Ctrl+U)',s:'Strikethrough',q:'Quote',c:'Code',e:'Spoiler'}:L==='pt'?{b:'Negrito (Ctrl+B)',i:'Itálico (Ctrl+I)',u:'Sublinhado (Ctrl+U)',s:'Tachado',q:'Citação',c:'Código',e:'Spoiler'}:{b:'Negrita (Ctrl+B)',i:'Cursiva (Ctrl+I)',u:'Subrayado (Ctrl+U)',s:'Tachado',q:'Cita',c:'Código',e:'Spoiler'};
+  const ico=d=>'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="'+d+'"/></svg>';
+  const BTNS_FMT=[['b','<b>B</b>'],['i','<i>I</i>'],['u','<u>U</u>'],['s','<s>S</s>'],0,
+    ['q',ico('M6 17h3l2-4V7H5v6h3zm8 0h3l2-4V7h-6v6h3z')],
+    ['c',ico('M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z')],
+    ['e',ico('M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z')]];
+  let barra=null,barraTA=null,barraRaf=0;
+  function crearBarra(){
+    barra=document.createElement('div');barra.className='barra-fmt';barra.setAttribute('role','toolbar');
+    barra.innerHTML=BTNS_FMT.map(x=>x?`<button type="button" data-f="${x[0]}" title="${TT[x[0]]}" aria-label="${TT[x[0]]}">${x[1]}</button>`:'<span class="fmt-sep"></span>').join('');
+    barra.addEventListener('mousedown',e=>e.preventDefault());   // no le quita el foco (ni la seleccion) al textarea
+    barra.addEventListener('click',e=>{const bt=e.target.closest('button');if(bt&&barraTA)aplicarFmt(barraTA,bt.dataset.f);});
+    document.body.appendChild(barra);
+  }
+  function ocultarBarra(){if(barra)barra.style.display='none';barraTA=null;}
+  // Posicion de la seleccion: el backdrop tiene exactamente el mismo texto y las mismas medidas que el textarea
+  function rectSeleccion(ta){
+    const bd=document.getElementById('backdrop-'+ta.dataset.target);if(!bd)return null;
+    const a=ta.selectionStart,b=ta.selectionEnd,w=document.createTreeWalker(bd,NodeFilter.SHOW_TEXT);
+    let nd,acc=0,sN=null,sO=0,eN=null,eO=0;
+    while((nd=w.nextNode())){
+      const len=nd.nodeValue.length;
+      if(!sN&&a<acc+len){sN=nd;sO=a-acc;}
+      if(sN&&b<=acc+len){eN=nd;eO=b-acc;break;}
+      acc+=len;
+    }
+    if(!sN||!eN)return null;
+    const r=document.createRange();r.setStart(sN,sO);r.setEnd(eN,eO);
+    const rs=r.getClientRects();const x=rs.length?rs[0]:r.getBoundingClientRect();
+    return x&&(x.width||x.height)?x:null;
+  }
+  function actualizarBarra(){
+    const ta=document.activeElement;
+    if(!esCaja(ta)||ta.selectionStart===ta.selectionEnd){ocultarBarra();return;}
+    const r=rectSeleccion(ta);if(!r){ocultarBarra();return;}
+    if(!barra)crearBarra();
+    barraTA=ta;barra.style.display='flex';
+    const w=barra.offsetWidth,h=barra.offsetHeight,vw=document.documentElement.clientWidth;
+    let top=r.top-h-8;if(top<4)top=r.bottom+8;
+    const left=Math.max(4,Math.min(r.left+r.width/2-w/2,vw-w-4));
+    barra.style.top=(top+window.scrollY)+'px';barra.style.left=(left+window.scrollX)+'px';
+  }
+  function progBarra(){cancelAnimationFrame(barraRaf);barraRaf=requestAnimationFrame(actualizarBarra);}
+  ['mouseup','keyup','select','input','focusout','selectionchange'].forEach(ev=>document.addEventListener(ev,progBarra));
+  window.addEventListener('resize',ocultarBarra);
   function calculaT(f){
     const s=Math.floor((Date.now()-f)/1000);
     const d=new Date(f);
