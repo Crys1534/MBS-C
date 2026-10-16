@@ -102,6 +102,14 @@ ${EMO_CSS}
 .fmt-sep{width:1px;height:18px;background:var(--c-border);margin:0 4px;}
 #caja-comentarios a.comentario-fecha{color:gray;text-decoration:none;cursor:pointer;}
 #caja-comentarios a.comentario-fecha:hover{text-decoration:underline;}
+/* corazon del creador */
+.cor-creador{display:inline-flex;align-items:center;align-self:center;flex-shrink:0;margin:0 4px 0 -2px;cursor:default;}
+.cor-av{position:relative;display:inline-block;width:22px;height:22px;}
+.cor-av img{width:22px;height:22px;border-radius:50%;object-fit:cover;display:block;background:rgba(0,0,0,.2);}
+.cor-av i{position:absolute;right:-5px;bottom:-5px;width:14px;height:13px;background:url('https://mineblocksstuffs.weebly.com/uploads/1/2/7/3/127300461/like-comment2_orig.png') center/cover no-repeat;filter:drop-shadow(0 0 2px rgba(0,0,0,.8));pointer-events:none;}
+/* en pantallas angostas, si ya no caben los botones, el ultimo baja a la siguiente linea completo (antes se partia el texto "Enlace" en dos) */
+.acciones-comentario{flex-wrap:wrap;}
+.acciones-comentario .btn-accion{white-space:nowrap;}
 </style>
 <div id="caja-comentarios">
   <div class="cabecera-principal">
@@ -151,6 +159,7 @@ ${EMO_CSS}
   Object.assign(localeDict.en,{ant:"Oldest",popD:"Comments with the most likes first",antD:"Oldest comments first",recD:"Newest comments first",vp:"Preview"});
   Object.assign(localeDict.pt,{ant:"Mais antigos",popD:"Coment\u00E1rios com mais curtidas primeiro",antD:"Coment\u00E1rios mais antigos primeiro",recD:"Coment\u00E1rios mais recentes primeiro",vp:"Pr\u00E9-visualiza\u00E7\u00E3o"});
   Object.assign(localeDict.es,{ant:"M\u00E1s antiguos",popD:"Los comentarios con m\u00E1s likes primero",antD:"Los comentarios m\u00E1s viejos primero",recD:"Los comentarios m\u00E1s nuevos primero",vp:"Vista previa"});
+  Object.assign(localeDict.en,{cor:"Loved by"});Object.assign(localeDict.pt,{cor:"Cora\u00E7\u00E3o de"});Object.assign(localeDict.es,{cor:"Coraz\u00F3n de"});
   document.getElementById('txtOrdenar').textContent=T.ord;
   document.getElementById('ordenMenu').innerHTML=[['populares','pop','popD'],['antiguos','ant','antD'],['recientes','rec','recD']].map(([k,t,d])=>`<button type="button" class="orden-opcion${k===appState.orden?' activo':''}" data-orden="${k}" role="menuitemradio" aria-checked="${k===appState.orden}"><span class="orden-opcion-t">${T[t]}</span><span class="orden-opcion-d">${T[d]}</span></button>`).join('');
 
@@ -315,7 +324,8 @@ ${EMO_CSS}
   db.ref('insignias').on('value',s=>{appState.insig=s.val()||{};if(appState.coms.length)render();});
   db.ref('shadowbans').on('value',s=>{appState.shadow=s.val()||{};if(appState.coms.length)render();});
   const syD=(c,a,pref,iF,cF,hF,t='div')=>{if(!a.length)return 0;let I=new Set();a.forEach(x=>{let id=pref+iF(x);let el=document.getElementById(id);let ht=hF(x);let cl=cF(x);I.add(id);if(!el){el=document.createElement(t);el.id=id;if(cl)el.className=cl;el.innerHTML=ht;el.dataset.h=ht;c.appendChild(el);}else{if(cl&&el.className!==cl){el.className=cl;}if(el.dataset.h!==ht){el.innerHTML=ht;el.dataset.h=ht;}}});[...c.children].forEach(n=>{if(!I.has(n.id))n.remove();});let dN=[...c.children];a.forEach((x,j)=>{let id=pref+iF(x);if(dN[j]&&dN[j].id!==id){c.insertBefore(document.getElementById(id),c.children[j]);dN=[...c.children];}});return 1;};
-  const genHash=(arr)=>arr.map(c=>c.id+(c.num||'')+(c.nombre||'')+(c.foto||'')+c.aprobado+(c.anclado||false)+(c.respuestas?Object.keys(c.respuestas).map(k=>k+(c.respuestas[k].num||'')+c.respuestas[k].aprobado).join(''):'')).join('|');
+  const czH=o=>o&&o.corazon?'h'+(typeof o.corazon==='object'?(o.corazon.nombre||'')+'|'+(o.corazon.foto||''):'1'):'';
+  const genHash=(arr)=>arr.map(c=>c.id+(c.num||'')+(c.nombre||'')+(c.foto||'')+c.aprobado+(c.anclado||false)+czH(c)+(c.respuestas?Object.keys(c.respuestas).map(k=>k+(c.respuestas[k].num||'')+c.respuestas[k].aprobado+czH(c.respuestas[k])).join(''):'')).join('|');
   db.ref('comentarios/'+idDePagina).on('value',s=>{
       let nC=[];s.forEach(c=>{const d=c.val();if(typeof d==='object'&&d!==null)nC.push({...d,id:c.key});});
       nC.sort(cmpComs);
@@ -618,6 +628,10 @@ mBox.scrollTop=0;mentionIdx=0;marcarMencion(false);
     else if(L==='en'){const ft=(v,u)=>`${v} ${u}${v>1?'s':''} ago`;return s>=31536000?`<span title="${tF}">${ft(Math.floor(s/31536000),"year")}</span>`:s>=2592000?`<span title="${tF}">${ft(Math.floor(s/2592000),"month")}</span>`:s>=86400?`<span title="${tF}">${ft(Math.floor(s/86400),"day")}</span>`:s>=3600?`<span title="${tF}">${ft(Math.floor(s/3600),"hour")}</span>`:s>=60?`<span title="${tF}">${ft(Math.floor(s/60),"minuto")}</span>`:`<span title="${tF}">Just now</span>`;}
     else{const ft=(v,u)=>`${v} ${u}${v>1?'s':''} atr\u00E1s`;return s>=31536000?`<span title="${tF}">${ft(Math.floor(s/31536000),"ano")}</span>`:s>=2592000?`<span title="${tF}">${ft(Math.floor(s/2592000),"m\u00EAs")}</span>`:s>=86400?`<span title="${tF}">${ft(Math.floor(s/86400),"dia")}</span>`:s>=3600?`<span title="${tF}">${ft(Math.floor(s/3600),"hora")}</span>`:s>=60?`<span title="${tF}">${ft(Math.floor(s/60),"minuto")}</span>`:`<span title="${tF}">Agora mesmo</span>`;}
   }
+  /* ===== CORAZON DEL CREADOR ===== */
+  // Lo da un creador desde el Studio y se guarda en  comentarios/<pagina>/<comentario>[/respuestas/<respuesta>]/corazon  como {nombre,foto,fecha}.
+  // Se ve como un avatar chiquito con un corazon rojo, junto al boton de like. Al pasar el mouse dice "Corazon de <creador>".
+  const corChip=x=>{const h=x&&x.corazon;if(!h)return '';const o=typeof h==='object'?h:{};const nm=String(o.nombre||'Creador');return `<span class="cor-creador" title="${esc(T.cor)} ${esc(nm)}" aria-label="${esc(T.cor)} ${esc(nm)}"><span class="cor-av"><img src="${esc(urlOk(o.foto))}" alt="" loading="lazy" decoding="async"><i></i></span></span>`;};
   function render(){
     let cTotal=0;
     appState.coms.forEach(c=>{if(visible(c)){cTotal++;if(c.respuestas){Object.values(c.respuestas).forEach(r=>{if(visible(r))cTotal++;});}}});
@@ -632,14 +646,14 @@ mBox.scrollTop=0;mentionIdx=0;marcarMencion(false);
       const l=localStorage.getItem('liked_'+d.id);
       let isExp=false;let tBtn=document.querySelector(`.btn-toggle-resp[data-id="${CSS.escape(String(d.id))}"]`);if(tBtn&&tBtn.dataset.state==='all')isExp=true;
       const imgP=urlOk(d.imagenAdjunta,'');
-      let html=`<div class="avatar"><img src="${esc(urlOk(d.foto))}" loading="lazy" decoding="async"></div><div class="comentario-contenido"><div class="cabecera-comentario"><span class="comentario-nombre">${esc(nom)}${bI} ${d.anclado?`<span class="badge-anclado">&#x1F4CC; ${T.p}</span>`:''}</span><a class="comentario-fecha enlace-permanente" href="${esc(permaUrl('c-'+(d.num||d.id)))}">${calculaT(Number(d.fecha)||ahora)}</a></div><p class="comentario-texto">${procT(d.texto)}</p>${imgP?`<img src="${esc(imgP)}" class="img-adjunta" loading="lazy" decoding="async">`:''}<div class="acciones-comentario"><button class="btn-accion btn-corazon ${l?'likeado':''}" data-id="${ID}"><span class="corazon-icono"></span><span class="contador-likes">${Number(d.likes)||0}</span></button><button class="btn-accion btn-responder" data-id="${ID}" data-replyuser="${esc(nom)}">${T.b}</button><button class="btn-accion btn-enlace" data-cod="${esc(d.num||d.id)}" title="${T.cpl}">&#x1F517; ${T.lnk}</button></div><div class="caja-respuestas ${d.respuestas&&Object.keys(d.respuestas).length>0?'con-hilo':''}">`;
+      let html=`<div class="avatar"><img src="${esc(urlOk(d.foto))}" loading="lazy" decoding="async"></div><div class="comentario-contenido"><div class="cabecera-comentario"><span class="comentario-nombre">${esc(nom)}${bI} ${d.anclado?`<span class="badge-anclado">&#x1F4CC; ${T.p}</span>`:''}</span><a class="comentario-fecha enlace-permanente" href="${esc(permaUrl('c-'+(d.num||d.id)))}">${calculaT(Number(d.fecha)||ahora)}</a></div><p class="comentario-texto">${procT(d.texto)}</p>${imgP?`<img src="${esc(imgP)}" class="img-adjunta" loading="lazy" decoding="async">`:''}<div class="acciones-comentario"><button class="btn-accion btn-corazon ${l?'likeado':''}" data-id="${ID}"><span class="corazon-icono"></span><span class="contador-likes">${Number(d.likes)||0}</span></button>${corChip(d)}<button class="btn-accion btn-responder" data-id="${ID}" data-replyuser="${esc(nom)}">${T.b}</button><button class="btn-accion btn-enlace" data-cod="${esc(d.num||d.id)}" title="${T.cpl}">&#x1F517; ${T.lnk}</button></div><div class="caja-respuestas ${d.respuestas&&Object.keys(d.respuestas).length>0?'con-hilo':''}">`;
       if(d.respuestas){
         const vK=Object.keys(d.respuestas).filter(k=>visible(d.respuestas[k]));
         html+=vK.map((k,idx)=>{
           const r=d.respuestas[k];const rn=r.nombre||'Usuario';const rl=localStorage.getItem(`liked_${d.id}_${k}`);const K=esc(k);
           let eS=(idx>0&&!isExp)?`style="display:none;"`:(idx>0&&isExp)?`style="display:flex;"`:'';
           const imgR=urlOk(r.imagenAdjunta,'');
-          return `<div class="respuesta-individual resp-item-${ID}" id="resp_${K}" ${eS}><div class="avatar"><img src="${esc(urlOk(r.foto))}" loading="lazy" decoding="async"></div><div><div class="cabecera-comentario"><span class="comentario-nombre">${esc(rn)}${estrella(r)?badge:''}</span><a class="comentario-fecha enlace-permanente" href="${esc(permaUrl('c-'+(r.num||k)))}">${calculaT(Number(r.fecha)||ahora)}</a></div><p class="comentario-texto">${procT(r.texto)}</p>${imgR?`<img src="${esc(imgR)}" class="img-adjunta" loading="lazy" decoding="async">`:''}<div class="acciones-comentario" style="margin-top: 5px; margin-bottom: 0px;"><button class="btn-accion btn-corazon ${rl?'likeado':''}" data-id="${K}" data-pid="${ID}"><span class="corazon-icono"></span><span class="contador-likes">${Number(r.likes)||0}</span></button><button class="btn-accion btn-responder" data-id="${ID}" data-replyuser="${esc(rn)}">${T.b}</button><button class="btn-accion btn-enlace" data-cod="${esc(r.num||k)}" title="${T.cpl}">&#x1F517; ${T.lnk}</button></div></div></div>`;
+          return `<div class="respuesta-individual resp-item-${ID}" id="resp_${K}" ${eS}><div class="avatar"><img src="${esc(urlOk(r.foto))}" loading="lazy" decoding="async"></div><div><div class="cabecera-comentario"><span class="comentario-nombre">${esc(rn)}${estrella(r)?badge:''}</span><a class="comentario-fecha enlace-permanente" href="${esc(permaUrl('c-'+(r.num||k)))}">${calculaT(Number(r.fecha)||ahora)}</a></div><p class="comentario-texto">${procT(r.texto)}</p>${imgR?`<img src="${esc(imgR)}" class="img-adjunta" loading="lazy" decoding="async">`:''}<div class="acciones-comentario" style="margin-top: 5px; margin-bottom: 0px;"><button class="btn-accion btn-corazon ${rl?'likeado':''}" data-id="${K}" data-pid="${ID}"><span class="corazon-icono"></span><span class="contador-likes">${Number(r.likes)||0}</span></button>${corChip(r)}<button class="btn-accion btn-responder" data-id="${ID}" data-replyuser="${esc(rn)}">${T.b}</button><button class="btn-accion btn-enlace" data-cod="${esc(r.num||k)}" title="${T.cpl}">&#x1F517; ${T.lnk}</button></div></div></div>`;
         }).join('');
         if(vK.length>1){
             const extC=vK.length-1;
