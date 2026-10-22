@@ -10,7 +10,7 @@
   const svg=s=>'data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">'+s+'</svg>');
   const EMOTES={
       hearth:'/uploads/1/2/7/3/127300461/like-comment2_orig.png',
-      minifrank:'/uploads/1/2/7/3/127300461/creeper.png',
+      flushed:'/uploads/1/2/7/3/127300461/flushed.png',
       discord:'/uploads/1/2/7/3/127300461/discord-icon.png',
       trophy:'/uploads/1/2/7/3/127300461/xdestacado_orig.gif',
       featured:'/uploads/1/2/7/3/127300461/featured-user-icon_orig.png',
