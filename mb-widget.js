@@ -9,12 +9,14 @@
   // Los 5 de abajo son de PRUEBA (dibujos SVG metidos en el propio codigo): borralos y pon los tuyos.
   const svg=s=>'data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">'+s+'</svg>');
   const EMOTES={
+      frank:'/uploads/1/2/7/3/127300461/default-pfp_596.png',
       hearth:'/uploads/1/2/7/3/127300461/like-comment2_orig.png',
       flushed:'/uploads/1/2/7/3/127300461/flushed.png',
+	  laughing:'/uploads/1/2/7/3/127300461/laughing.png',
+	  rage:'/uploads/1/2/7/3/127300461/rage.png',
       discord:'/uploads/1/2/7/3/127300461/discord-icon.png',
       trophy:'/uploads/1/2/7/3/127300461/xdestacado_orig.gif',
       featured:'/uploads/1/2/7/3/127300461/featured-user-icon_orig.png',
-      frank:'/uploads/1/2/7/3/127300461/default-pfp_596.png',
     };
   // --- No hace falta tocar nada de aqui para abajo ---
   const esImg=v=>/^(https?:)?\/|^data:image\//.test(v);
