@@ -14,6 +14,8 @@
       flushed:'/uploads/1/2/7/3/127300461/flushed.png',
 	  laughing:'/uploads/1/2/7/3/127300461/laughing.png',
 	  rage:'/uploads/1/2/7/3/127300461/rage.png',
+	  fav:'/uploads/1/2/7/3/127300461/fav.png',
+	  bubblemsg:'/uploads/1/2/7/3/127300461/bubblemsg.png',
       discord:'/uploads/1/2/7/3/127300461/discord-icon.png',
       trophy:'/uploads/1/2/7/3/127300461/xdestacado_orig.gif',
       featured:'/uploads/1/2/7/3/127300461/featured-user-icon_orig.png',
