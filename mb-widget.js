@@ -123,6 +123,23 @@ ${EMO_CSS}
 /* en pantallas angostas, si ya no caben los botones, el ultimo baja a la siguiente linea completo (antes se partia el texto "Enlace" en dos) */
 .acciones-comentario{flex-wrap:wrap;}
 .acciones-comentario .btn-accion{white-space:nowrap;}
+/* ===== botones de emotes, imagen y enviar DENTRO de la caja de escribir (estilo Discord) ===== */
+.input-contenedor{display:flex;align-items:flex-end;}
+.input-campo{position:relative;flex:1;min-width:0;}
+.input-barra{display:flex;align-items:center;gap:2px;padding:4px;flex-shrink:0;}
+.input-barra .btn-attach{color:#fff;opacity:.8;width:34px;height:34px;padding:0;border-radius:6px;font-size:0;}
+.input-barra .btn-attach:hover,.input-barra .btn-attach:focus-visible{opacity:1;transform:none;color:#fff;background:rgba(255,255,255,.1);}
+.input-barra .btn-attach svg{width:22px;height:22px;display:block;}
+.input-barra .btn-send-whatsapp,.input-barra .btn-send-whatsapp-small{margin-left:2px;}
+#caja-comentarios #textoComentario{min-height:52px;}
+#caja-comentarios #textoComentario,#caja-comentarios #backdrop-main{padding-top:15px;padding-bottom:15px;}
+/* ===== el boton de copiar enlace solo aparece al pasar el mouse por ESE comentario (en celular siempre se ve) ===== */
+@media (hover:hover){@supports selector(:has(*)){
+#caja-comentarios .btn-enlace{opacity:0;pointer-events:none;transition:opacity .15s;}
+#caja-comentarios .comentario-individual:hover:not(:has(.caja-respuestas:hover))>.comentario-contenido>.acciones-comentario .btn-enlace,
+#caja-comentarios .respuesta-individual:hover .btn-enlace,
+#caja-comentarios .acciones-comentario:focus-within .btn-enlace{opacity:1;pointer-events:auto;}
+}}
 </style>
 <div id="caja-comentarios">
   <div class="cabecera-principal">
@@ -137,13 +154,15 @@ ${EMO_CSS}
         <input type="text" id="nombreUsuario" required>
         <span id="nombreUsuarioLogueado" style="display:none;"></span>
         <div class="input-contenedor">
-            <div class="input-backdrop" id="backdrop-main"></div>
-            <textarea id="textoComentario" required class="textarea-transparente" data-target="main"></textarea>
+            <div class="input-campo">
+                <div class="input-backdrop" id="backdrop-main"></div>
+                <textarea id="textoComentario" required class="textarea-transparente" data-target="main"></textarea>
+            </div>
+            <div class="input-barra"><button class="btn-attach btn-emote" data-action="emote" data-target="main" title="Emotes" aria-label="Emotes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M8 14.5c1 1.4 2.4 2.1 4 2.1s3-.7 4-2.1"/><circle cx="9" cy="10" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="10" r="1.3" fill="currentColor" stroke="none"/></svg></button><button class="btn-attach" id="btnImgMain" title="Adjuntar Imagen" aria-label="Adjuntar Imagen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="8.5" cy="9.5" r="1.7"/><path d="M21 15.5l-5-5L6 20"/></svg></button><button id="btnEnviar" class="btn-send-whatsapp" aria-label="Enviar"><svg viewBox="0 0 24 24" width="22" height="22" fill="white"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button></div>
         </div>
       </div>
     </div>
     <div class="preview-adjunto" id="cajaPreviewAdjunto"><img id="imgPreviewAdjunto" src=""><button class="btn-quitar-adjunto" id="btnQuitarAdjunto">X</button></div>
-    <div class="controles-formulario"><button class="btn-attach btn-emote" data-action="emote" data-target="main" title="Emotes">&#x1F600;</button><button class="btn-attach" id="btnImgMain" title="Adjuntar Imagen">&#x1F5BC;&#xFE0F;</button><button id="btnEnviar" class="btn-send-whatsapp"><svg viewBox="0 0 24 24" width="22" height="22" fill="white"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button></div>
   </div>
   <div id="msgExito" style="display:none;background:#f0ffdb;color:#2b5e0c;border:1px solid #cddc39;padding:10px;border-radius:6px;margin-bottom:15px;text-align:center;font-weight:bold;font-size:14px;"></div>
   <div id="listaComentarios">
@@ -270,9 +289,9 @@ ${EMO_CSS}
   }
   window.addEventListener('hashchange',()=>{hashObj=parseHash();irAlPermalink();});
 
-  auth.onAuthStateChanged(u=>{appState.usr=u;DOM.nom.style.display=u?'none':'block';document.getElementById('nombreUsuarioLogueado').style.display='none';document.getElementById('btnGoogle').style.display=u?'none':'flex';document.getElementById('infoUsuario').style.display=u?'flex':'none';if(u){document.getElementById('textoUsuario').textContent=T.l;DOM.avaAct.src=u.photoURL||"/uploads/1/2/7/3/127300461/default-pfp_596.png";}else{DOM.avaAct.src=appState.pfpL||"/uploads/1/2/7/3/127300461/default-pfp_596.png";}});
+  auth.onAuthStateChanged(u=>{appState.usr=u;DOM.nom.style.display=u?'none':'block';document.getElementById('nombreUsuarioLogueado').style.display='none';document.getElementById('btnGoogle').style.display=u?'none':'flex';document.getElementById('infoUsuario').style.display=u?'flex':'none';if(u){document.getElementById('textoUsuario').textContent=T.l;DOM.avaAct.src=u.photoURL||"/uploads/1/2/7/3/127300461/default-pfp_596.png";}else{DOM.avaAct.src=appState.pfpL||"/uploads/1/2/7/3/127300461/default-pfp_596.png";}aplicarIdentidad();});
   document.getElementById('btnGoogle').onclick=()=>auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(e=>alert("Error: "+e.message));document.getElementById('btnSalir').onclick=()=>auth.signOut();
-  document.getElementById('avatarUsuarioActual').onclick=()=>!appState.usr&&DOM.inpFile.click();
+  document.getElementById('avatarUsuarioActual').onclick=()=>!appState.usr&&!mbsSes&&DOM.inpFile.click();
   DOM.inpFile.onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{const i=new Image();i.onload=()=>{const c=document.createElement('canvas');let s=Math.min(i.width,i.height),x=(i.width-s)/2,y=(i.height-s)/2;let h=i.height>80?80:i.height;let w=i.width>80?80:i.width;c.width=80;c.height=80;c.getContext('2d').drawImage(i,x,y,s,s,0,0,80,80);appState.pfpL=c.toDataURL('image/jpeg',0.95);DOM.avaAct.src=appState.pfpL;localStorage.setItem('savedAvatar',appState.pfpL);};i.src=ev.target.result;};r.readAsDataURL(f);};
   document.getElementById('btnImgMain').onclick=()=>{targetActivoAdjunto='main';inImg.click();};
 
@@ -306,12 +325,13 @@ ${EMO_CSS}
     bd.innerHTML=h;
   }
   function publicarMsj(t,pId=null,rInput=null){
+    aplicarIdentidad();
     t=aTokens(t);
     const cd=localStorage.getItem('floodT');if(cd&&(Date.now()-cd)<30000){alert(`\u23F3 Spam.`);return;}
     let n=appState.usr?(appState.usr.displayName||'Usuario'):(DOM.nom.value.trim()||"Invitado");const uid=appState.usr?appState.usr.uid:null;
     const imgData=pId?appState.imgAdjResp[pId]:appState.imgAdjMain;
     if(t.trim()===""&&!imgData)return;
-    const data={nombre:n,texto:t,fecha:firebase.database.ServerValue.TIMESTAMP,foto:appState.usr?appState.usr.photoURL:appState.pfpL,likes:0,shadowbanned:silenciado(uid,n),aprobado:false};
+    const data={nombre:n,texto:t,fecha:firebase.database.ServerValue.TIMESTAMP,foto:appState.usr?appState.usr.photoURL:(mbsSes?(mbsSes.avatar||DEF_PFP):appState.pfpL),likes:0,shadowbanned:silenciado(uid,n),aprobado:false};
     if(uid)data.uid=uid;
     if(imgData)data.imagenAdjunta=imgData;const num=nuevoCodigo(codigosUsados());if(num)data.num=num;
     db.ref(pId?`comentarios/${idDePagina}/${pId}/respuestas`:`comentarios/${idDePagina}`).push(data).then(()=>{
@@ -322,6 +342,62 @@ ${EMO_CSS}
     });
   }
   DOM.btnEnv.onclick=()=>publicarMsj(DOM.txt.value);
+
+  /* ===== SESION DEL SITIO (mbs_sesion) =====
+     Si la persona inicio sesion arriba en tu pagina (el boton "Iniciar sesion" de Mine Blocks Stuffs), aqui comenta con ese nombre y esa foto,
+     sin escribir su nombre. Si ademas entra con Google, manda Google. Se actualiza solo al iniciar o cerrar sesion (en esta u otra pestana). */
+  let mbsSes=null;
+  function leerSesionMbs(){
+    try{const o=JSON.parse(localStorage.getItem('mbs_sesion')||'null');
+      if(o&&typeof o==='object'&&typeof o.nombre==='string'&&o.nombre.trim())return {nombre:o.nombre.trim().slice(0,40),avatar:urlOk(o.avatar,'')};
+    }catch(e){}
+    return null;
+  }
+  function aplicarIdentidad(){
+    const antes=mbsSes;mbsSes=leerSesionMbs();
+    const bG=document.getElementById('btnGoogle'),info=document.getElementById('infoUsuario'),bS=document.getElementById('btnSalir'),tU=document.getElementById('textoUsuario');
+    if(appState.usr){bS.style.display='';}
+    else if(mbsSes){
+      DOM.nom.value=mbsSes.nombre;DOM.nom.style.display='none';
+      bG.style.display='none';info.style.display='flex';bS.style.display='none';
+      tU.textContent=(L==='en'?'Signed in as ':'Conectado como ')+mbsSes.nombre;
+      DOM.avaAct.src=mbsSes.avatar||DEF_PFP;
+    }else{
+      if(antes){try{DOM.nom.value=localStorage.getItem('savedName')||'';}catch(e){DOM.nom.value='';}}
+      DOM.nom.style.display='block';bG.style.display='flex';info.style.display='none';bS.style.display='';
+      DOM.avaAct.src=appState.pfpL||DEF_PFP;
+    }
+    if((antes&&antes.nombre)!==(mbsSes&&mbsSes.nombre)&&appState.coms.length)render();   // cambia cuales son "mis" comentarios
+    registrarConexion();
+  }
+  window.addEventListener('storage',e=>{if(e.key==='mbs_sesion')aplicarIdentidad();});
+  // el boton de sesion de tu pagina se redibuja al entrar/salir: si cambia, se vuelve a leer la sesion
+  function vigilarSesion(){const el=document.getElementById('mbs-sesion');if(el&&!el.dataset.mbsVigilado){el.dataset.mbsVigilado='1';new MutationObserver(()=>aplicarIdentidad()).observe(el,{childList:true});}}
+  vigilarSesion();
+  if(document.readyState!=='complete')window.addEventListener('load',()=>{vigilarSesion();aplicarIdentidad();});
+
+  /* ===== ULTIMA CONEXION (la ves en tu Studio) =====
+     Guarda en conexiones/<cuenta>: nombre, foto, desde donde entro (google o sesion del sitio), su ultima conexion y si fue celular, pc o tablet.
+     Solo para quien entro con Google o con la sesion del sitio. Como mucho una vez cada 5 minutos por navegador. */
+  function tipoDispositivo(){
+    const ua=navigator.userAgent||'';
+    if(/iPad|Tablet|PlayBook|Silk|Kindle/i.test(ua)||(/Android/i.test(ua)&&!/Mobile/i.test(ua))||(/Macintosh/i.test(ua)&&navigator.maxTouchPoints>1))return 'tablet';
+    if((navigator.userAgentData&&navigator.userAgentData.mobile)||/Mobi|iPhone|iPod|Android|Windows Phone|IEMobile|Opera Mini/i.test(ua))return 'celular';
+    return 'pc';
+  }
+  function registrarConexion(){
+    const u=appState.usr;let clave,datos;
+    if(u){clave='uid:'+u.uid;datos={nombre:String(u.displayName||'Usuario').slice(0,60),via:'google'};if(u.photoURL&&String(u.photoURL).length<=1000)datos.foto=String(u.photoURL);}
+    else if(mbsSes){clave='mbs:'+mbsSes.nombre.toLowerCase().replace(/[.$#\[\]\/]/g,'_');datos={nombre:mbsSes.nombre,via:'mbs'};if(mbsSes.avatar&&mbsSes.avatar.length<=1000)datos.foto=mbsSes.avatar;}
+    else return;
+    const marca='mbs_conx_'+clave,ahora=Date.now();
+    try{const t=Number(localStorage.getItem(marca));if(t>0&&ahora>=t&&ahora-t<5*60000)return;localStorage.setItem(marca,String(ahora));}catch(e){}
+    const disp=tipoDispositivo(),TS=firebase.database.ServerValue.TIMESTAMP;
+    datos.dispositivo=disp;datos.ultima=TS;datos.pagina=String(idDePagina).slice(0,200);datos['dispositivos/'+disp]=TS;
+    db.ref('conexiones/'+clave).update(datos).catch(()=>{try{localStorage.removeItem(marca);}catch(e){}});   // si Firebase no lo permite, no pasa nada
+  }
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')aplicarIdentidad();});
+  aplicarIdentidad();
   function updateUniqueUsers(){
     const map={};
     appState.coms.forEach(c=>{
@@ -430,7 +506,7 @@ mBox.scrollTop=0;mentionIdx=0;marcarMencion(false);
         ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length);ta.style.height='auto';ta.style.height=ta.scrollHeight+'px';
       }else{z.style.display='none';ta.dataset.lastu='';}
     }else if(btn.classList.contains('btn-enviar-respuesta')){
-      const inp=btn.parentElement.querySelector('.input-respuesta');publicarMsj(inp.value,id,inp);document.getElementById('form-resp-'+id).style.display='none';
+      const inp=btn.closest('.formulario-respuesta').querySelector('.input-respuesta');publicarMsj(inp.value,id,inp);document.getElementById('form-resp-'+id).style.display='none';
     }else if(btn.classList.contains('btn-enlace')){
       const url=permaUrl('c-'+btn.dataset.cod);
       copiarTexto(url).then(ok=>{if(!ok)return;const o=btn.innerHTML;btn.innerHTML='&#x2705; '+T.cpd;setTimeout(()=>{if(btn.isConnected)btn.innerHTML=o;},1800);});
@@ -736,7 +812,7 @@ mBox.scrollTop=0;mentionIdx=0;marcarMencion(false);
             html+=`<div style="margin-left:46px; margin-top:10px;"><button class="btn-accion btn-toggle-resp" data-id="${ID}" data-state="${st}" data-total="${vK.length}" style="color:#f1f1f1; font-weight:bold;">${txt}</button></div>`;
         }
       }
-      return html+`</div><div class="zona-formulario-respuesta" id="form-resp-${ID}" style="display:none;"><div class="formulario-respuesta"><div class="avatar" style="width:30px;height:30px;flex-shrink:0;"><img src="${esc(DOM.avaAct.src)}" loading="lazy" decoding="async"></div><div class="input-contenedor"><div class="input-backdrop" id="backdrop-${ID}"><span class="backdrop-placeholder">${T.r}</span></div><textarea id="input-resp-${ID}" class="input-respuesta textarea-transparente" data-target="${ID}" rows="1"></textarea></div><button class="btn-attach btn-emote" data-action="emote" data-id="${ID}" title="Emotes">&#x1F600;</button><button class="btn-attach" data-action="img" data-id="${ID}" title="Adjuntar Foto">&#x1F5BC;&#xFE0F;</button><button class="btn-enviar-respuesta btn-send-whatsapp-small" data-id="${ID}"><svg viewBox="0 0 24 24" width="16" height="16" fill="white"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button></div><div class="preview-adjunto" id="prev-resp-${ID}" style="margin-left:46px;"><img src=""><button class="btn-quitar-adjunto" data-action="quitar-adj" data-id="${ID}">X</button></div></div></div>`;
+      return html+`</div><div class="zona-formulario-respuesta" id="form-resp-${ID}" style="display:none;"><div class="formulario-respuesta"><div class="avatar" style="width:30px;height:30px;flex-shrink:0;"><img src="${esc(DOM.avaAct.src)}" loading="lazy" decoding="async"></div><div class="input-contenedor"><div class="input-campo"><div class="input-backdrop" id="backdrop-${ID}"><span class="backdrop-placeholder">${T.r}</span></div><textarea id="input-resp-${ID}" class="input-respuesta textarea-transparente" data-target="${ID}" rows="1"></textarea></div><div class="input-barra"><button class="btn-attach btn-emote" data-action="emote" data-id="${ID}" title="Emotes" aria-label="Emotes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M8 14.5c1 1.4 2.4 2.1 4 2.1s3-.7 4-2.1"/><circle cx="9" cy="10" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="10" r="1.3" fill="currentColor" stroke="none"/></svg></button><button class="btn-attach" data-action="img" data-id="${ID}" title="Adjuntar Foto" aria-label="Adjuntar Foto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="8.5" cy="9.5" r="1.7"/><path d="M21 15.5l-5-5L6 20"/></svg></button><button class="btn-enviar-respuesta btn-send-whatsapp-small" data-id="${ID}" aria-label="Enviar"><svg viewBox="0 0 24 24" width="16" height="16" fill="white"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button></div></div></div><div class="preview-adjunto" id="prev-resp-${ID}" style="margin-left:46px;"><img src=""><button class="btn-quitar-adjunto" data-action="quitar-adj" data-id="${ID}">X</button></div></div></div>`;
     })){DOM.lista.innerHTML='';}
     const btnC=document.getElementById('btnCargarMasContainer');
     if(appState.limite<appState.coms.length){btnC.style.display='block';btnC.innerHTML=`<button class="btn-cargar-mas" data-action="more">${T.m}</button>`;}
