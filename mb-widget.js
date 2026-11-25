@@ -181,7 +181,7 @@ ${EMO_CSS}
   let appState={usr:null,pfpL:null,imgAdjMain:null,imgAdjResp:{},limite:10,coms:[],insig:{},shadow:{},orden:'populares',rank:Object.create(null)};
   const estrella=x=>!!((x.uid&&tiene(appState.insig,uidKey(x.uid)))||tiene(appState.insig,nameKey(x.nombre)));               // insignia: por cuenta Google, o por nombre (antiguo)
   const silenciado=(uid,n)=>!!((uid&&tiene(appState.shadow,uidKey(uid)))||tiene(appState.shadow,nameKey(n)));
-  const esMio=x=>{const u=appState.usr;if(u)return x.uid?x.uid===u.uid:x.nombre===u.displayName;return !x.uid&&x.nombre===(DOM.nom.value.trim()||'Invitado');};
+  const esMio=x=>{const u=appState.usr;if(x.uid)return !!(u&&x.uid===u.uid);return x.nombre===(mbsSes?mbsSes.nombre:(u?u.displayName:(DOM.nom.value.trim()||'Invitado')));};
   const visible=x=>!!x&&typeof x==='object'&&x.aprobado!==false&&!(x.shadowbanned&&!esMio(x));                   // lo mismo que ve cualquier visitante
   let targetActivoAdjunto=null;let uniqueUsers=[];let activeTextarea=null;let mentionStartIndex=-1;let mentionIdx=0;
   const inImg=document.createElement('input');inImg.type='file';inImg.accept='image/png, image/jpeg, image/webp';
@@ -328,10 +328,10 @@ ${EMO_CSS}
     aplicarIdentidad();
     t=aTokens(t);
     const cd=localStorage.getItem('floodT');if(cd&&(Date.now()-cd)<30000){alert(`\u23F3 Spam.`);return;}
-    let n=appState.usr?(appState.usr.displayName||'Usuario'):(DOM.nom.value.trim()||"Invitado");const uid=appState.usr?appState.usr.uid:null;
+    let n=mbsSes?mbsSes.nombre:(appState.usr?(appState.usr.displayName||'Usuario'):(DOM.nom.value.trim()||"Invitado"));const uid=appState.usr?appState.usr.uid:null;
     const imgData=pId?appState.imgAdjResp[pId]:appState.imgAdjMain;
     if(t.trim()===""&&!imgData)return;
-    const data={nombre:n,texto:t,fecha:firebase.database.ServerValue.TIMESTAMP,foto:appState.usr?appState.usr.photoURL:(mbsSes?(mbsSes.avatar||DEF_PFP):appState.pfpL),likes:0,shadowbanned:silenciado(uid,n),aprobado:false};
+    const data={nombre:n,texto:t,fecha:firebase.database.ServerValue.TIMESTAMP,foto:mbsSes?(mbsSes.avatar||DEF_PFP):(appState.usr?appState.usr.photoURL:appState.pfpL),likes:0,shadowbanned:silenciado(uid,n),aprobado:false};
     if(uid)data.uid=uid;
     if(imgData)data.imagenAdjunta=imgData;const num=nuevoCodigo(codigosUsados());if(num)data.num=num;
     db.ref(pId?`comentarios/${idDePagina}/${pId}/respuestas`:`comentarios/${idDePagina}`).push(data).then(()=>{
@@ -345,7 +345,9 @@ ${EMO_CSS}
 
   /* ===== SESION DEL SITIO (mbs_sesion) =====
      Si la persona inicio sesion arriba en tu pagina (el boton "Iniciar sesion" de Mine Blocks Stuffs), aqui comenta con ese nombre y esa foto,
-     sin escribir su nombre. Si ademas entra con Google, manda Google. Se actualiza solo al iniciar o cerrar sesion (en esta u otra pestana). */
+     sin escribir su nombre: es UNA sola cuenta. Si ademas entro con Google, se sigue usando el nombre y la foto de tu pagina,
+     y su cuenta de Google se guarda por dentro (uid) para que silenciados e insignias por cuenta sigan funcionando.
+     Se actualiza solo al iniciar o cerrar sesion (en esta u otra pestana). */
   let mbsSes=null;
   function leerSesionMbs(){
     try{const o=JSON.parse(localStorage.getItem('mbs_sesion')||'null');
@@ -355,17 +357,16 @@ ${EMO_CSS}
   }
   function aplicarIdentidad(){
     const antes=mbsSes;mbsSes=leerSesionMbs();
-    const bG=document.getElementById('btnGoogle'),info=document.getElementById('infoUsuario'),bS=document.getElementById('btnSalir'),tU=document.getElementById('textoUsuario');
-    if(appState.usr){bS.style.display='';}
-    else if(mbsSes){
+    const u=appState.usr,bG=document.getElementById('btnGoogle'),info=document.getElementById('infoUsuario'),bS=document.getElementById('btnSalir'),tU=document.getElementById('textoUsuario');
+    if(mbsSes){   // UNA sola cuenta: la de tu pagina (aunque tambien haya entrado con Google)
       DOM.nom.value=mbsSes.nombre;DOM.nom.style.display='none';
       bG.style.display='none';info.style.display='flex';bS.style.display='none';
       tU.textContent=(L==='en'?'Signed in as ':'Conectado como ')+mbsSes.nombre;
       DOM.avaAct.src=mbsSes.avatar||DEF_PFP;
     }else{
       if(antes){try{DOM.nom.value=localStorage.getItem('savedName')||'';}catch(e){DOM.nom.value='';}}
-      DOM.nom.style.display='block';bG.style.display='flex';info.style.display='none';bS.style.display='';
-      DOM.avaAct.src=appState.pfpL||DEF_PFP;
+      if(u){DOM.nom.style.display='none';bG.style.display='none';info.style.display='flex';bS.style.display='';tU.textContent=T.l;DOM.avaAct.src=u.photoURL||DEF_PFP;}
+      else{DOM.nom.style.display='block';bG.style.display='flex';info.style.display='none';bS.style.display='';DOM.avaAct.src=appState.pfpL||DEF_PFP;}
     }
     if((antes&&antes.nombre)!==(mbsSes&&mbsSes.nombre)&&appState.coms.length)render();   // cambia cuales son "mis" comentarios
     registrarConexion();
@@ -378,6 +379,7 @@ ${EMO_CSS}
 
   /* ===== ULTIMA CONEXION (la ves en tu Studio) =====
      Guarda en conexiones/<cuenta>: nombre, foto, desde donde entro (google o sesion del sitio), su ultima conexion y si fue celular, pc o tablet.
+     Y en conexiones_log/<cuenta> una linea por visita (fecha, dispositivo y pagina) para el historial del Studio.
      Solo para quien entro con Google o con la sesion del sitio. Como mucho una vez cada 5 minutos por navegador. */
   function tipoDispositivo(){
     const ua=navigator.userAgent||'';
@@ -387,14 +389,21 @@ ${EMO_CSS}
   }
   function registrarConexion(){
     const u=appState.usr;let clave,datos;
-    if(u){clave='uid:'+u.uid;datos={nombre:String(u.displayName||'Usuario').slice(0,60),via:'google'};if(u.photoURL&&String(u.photoURL).length<=1000)datos.foto=String(u.photoURL);}
-    else if(mbsSes){clave='mbs:'+mbsSes.nombre.toLowerCase().replace(/[.$#\[\]\/]/g,'_');datos={nombre:mbsSes.nombre,via:'mbs'};if(mbsSes.avatar&&mbsSes.avatar.length<=1000)datos.foto=mbsSes.avatar;}
+    if(mbsSes){   // la cuenta de tu pagina manda; si ademas entro con Google se guarda su uid para que el Studio no la duplique
+      clave='mbs:'+mbsSes.nombre.toLowerCase().replace(/[.$#\[\]\/]/g,'_');datos={nombre:mbsSes.nombre,via:'mbs'};
+      if(mbsSes.avatar&&mbsSes.avatar.length<=1000)datos.foto=mbsSes.avatar;
+      if(u)datos.uid=String(u.uid);
+    }else if(u){clave='uid:'+u.uid;datos={nombre:String(u.displayName||'Usuario').slice(0,60),via:'google'};if(u.photoURL&&String(u.photoURL).length<=1000)datos.foto=String(u.photoURL);}
     else return;
-    const marca='mbs_conx_'+clave,ahora=Date.now();
+    const marca='mbs_conx_'+clave+(datos.uid?'|'+datos.uid:''),ahora=Date.now();
     try{const t=Number(localStorage.getItem(marca));if(t>0&&ahora>=t&&ahora-t<5*60000)return;localStorage.setItem(marca,String(ahora));}catch(e){}
-    const disp=tipoDispositivo(),TS=firebase.database.ServerValue.TIMESTAMP;
-    datos.dispositivo=disp;datos.ultima=TS;datos.pagina=String(idDePagina).slice(0,200);datos['dispositivos/'+disp]=TS;
+    const disp=tipoDispositivo(),TS=firebase.database.ServerValue.TIMESTAMP,pag=String(idDePagina).slice(0,200);
+    datos.dispositivo=disp;datos.ultima=TS;datos.pagina=pag;datos['dispositivos/'+disp]=TS;
     db.ref('conexiones/'+clave).update(datos).catch(()=>{try{localStorage.removeItem(marca);}catch(e){}});   // si Firebase no lo permite, no pasa nada
+    // historial: una linea por visita (su propio "cada 5 minutos", para no repetir la linea si en la misma visita entra tambien con Google)
+    const marcaH='mbs_conxh_'+clave;let ponerH=true;
+    try{const t=Number(localStorage.getItem(marcaH));if(t>0&&ahora>=t&&ahora-t<5*60000)ponerH=false;else localStorage.setItem(marcaH,String(ahora));}catch(e){}
+    if(ponerH)db.ref('conexiones_log/'+clave).push({f:TS,d:disp,p:pag}).catch(()=>{try{localStorage.removeItem(marcaH);}catch(e){}});
   }
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')aplicarIdentidad();});
   aplicarIdentidad();
